@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
+
 class ModelData:
     def __init__(self, part_size: tuple[int]):
         self.global_size = (10, 10, 10)
