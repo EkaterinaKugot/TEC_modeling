@@ -1,15 +1,28 @@
 import numpy as np
 from numpy.typing import NDArray
+from simurg_core.geometry.coord import cart_to_lle
+from simurg_core.models.simple_tec import get_ne
+from datetime import datetime
 
+from math import sin, cos
+
+KM_PER_DEGREE = 111
 
 class ModelData:
-    def __init__(self, part_size: tuple[int]):
-        self.global_size = (10, 10, 10)
-        np.random.seed(29)
-        self.global_arr = np.random.randint(0, 101, size=self.global_size)
+    def __init__(self, part_size: tuple[int], start_h_from_ground: int, end_h_from_ground: int):
+        self.global_size = (180*KM_PER_DEGREE, 360*KM_PER_DEGREE, end_h_from_ground)
         self.part_size = part_size
-        
-        self.overall_size = (self.global_size[0]*part_size[0], self.global_size[1]*part_size[1], self.global_size[2]*part_size[2])
+        self.number_part = (
+            self.global_size[0] // self.part_size[0],
+            self.global_size[1] // self.part_size[1],
+            self.global_size[2] // self.part_size[2]
+        )
+        self.start_h_from_ground = start_h_from_ground
+
+        self.ne_0 = 2e12
+        self.hmax = 300
+        self.half_thickness = 100
+
         self.diagonal = np.sqrt(self.part_size[0]**2 + self.part_size[1]**2 + self.part_size[2]**2)
 
         self.global_idx = []
@@ -35,6 +48,7 @@ class ModelData:
             for i in range(3):
                 if direction[i] == 0:
                     if line_start[i] < box_min[i] or line_start[i] > box_max[i]:
+                       
                         return False, None, None
         
         if t_enter <= t_exit and t_exit >= 0:
@@ -45,23 +59,22 @@ class ModelData:
         return False, None, None
     
     
-    def calculate_neighbours(self, idx_x: int, idx_y: int, idx_z: int) -> list[list[int]]:
+    def calculate_neighbours(self, idx_x: int, idx_y: int, idx_z: int) -> list[list[int]]: 
         neighbors = []
-        for dy in [-1, 0, 1]:
-            for dz in [-1, 0, 1]:
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                x = idx_x + dx
+                if x < 0:
+                    x = self.number_part[0] - 1
+                elif x >= self.number_part[0]:
+                    x = 0
+
                 y = idx_y + dy 
                 if y < 0:
-                    y = self.global_size[1] - 1
-                elif y >= self.global_size[1]:
+                    y = self.number_part[1] - 1
+                elif y >= self.number_part[1]:
                     y = 0
-
-                z = idx_z + dz
-                if z < 0:
-                    z = self.global_size[2] - 1
-                elif z >= self.global_size[2]:
-                    z = 0
-                neighbors.append([idx_x, y, z])
-
+                neighbors.append([x, y, idx_z])
         return neighbors
     
     
@@ -72,11 +85,13 @@ class ModelData:
             part_height: int, 
             part_depth: int, 
             xyz: list[int]
-        ) -> list[list[int] | list[list[int]] | tuple[tuple[NDArray]] | float]:
+        ) -> list[list[int] | list[list[int]] | tuple[tuple[NDArray]] | float | NDArray]:
         x, y, z = xyz
         
         box_min = np.array([x, y, z])
         box_max = np.array([x + part_width, y + part_height, z + part_depth])
+
+        center = (box_min + box_max) / 2
                         
         intersects, intersection_start, intersection_end = self.calculate_intersection_coords(
                             line[0], line[1], box_min, box_max
@@ -87,60 +102,106 @@ class ModelData:
             idx_z = int(z // part_depth)
             length = np.linalg.norm(intersection_end - intersection_start)
             neighbours = self.calculate_neighbours(idx_x, idx_y, idx_z)
-            return [idx_x, idx_y, idx_z], neighbours, (tuple(intersection_start), tuple(intersection_end)), length
-        return None, None, None, None
+            return [idx_x, idx_y, idx_z], center, neighbours, (tuple(intersection_start), tuple(intersection_end)), length
+        return None, None, None, None, None
         
 
     def calculate_lens(self, line: NDArray) -> list[list[tuple[tuple[float]]] | list[float]]:
         coords_intersects = []
         lengths = []
-        overall_width, overall_height, overall_depth = self.overall_size
+        global_idx = []
+        center_idx = []
+        global_width, global_height, global_depth = self.global_size
         part_width, part_height, part_depth = self.part_size
 
         if len(self.neighbours) == 0:
-            for x in range(0, overall_width, part_width):
-                for y in range(0, overall_height, part_height):
-                    for z in range(0, overall_depth, part_depth):
+            for x in range(0, global_width, part_width):
+                for y in range(0, global_height, part_height):
+                    for z in range(self.start_h_from_ground, global_depth, part_depth):
                         xyz = [x, y, z]
-                        global_idx, neighbours, intersection, length = self.calculate_intersecs(line, part_width, part_height, part_depth, xyz)
-                        if global_idx is not None:
-                            self.global_idx.append(global_idx)
+                        g_idx, center, neighbours, intersection, length = self.calculate_intersecs(line, part_width, part_height, part_depth, xyz)
+                        if g_idx is not None:
+                            global_idx.append(g_idx)
+                            center_idx.append(center)
                             self.neighbours.append(neighbours)
                             coords_intersects.append(intersection)
                             lengths.append(length)
         else:
             tmp_neighbours = []
-            self.global_idx = []
             for i in self.neighbours:
                 for indices in i:
                     xyz = [indices[0] * part_width, indices[1] * part_height, indices[2] * part_depth]
-                    global_idx, neighbours, intersection, length = self.calculate_intersecs(
+                    g_idx, center, neighbours, intersection, length = self.calculate_intersecs(
                         line, 
                         part_width, 
                         part_height, 
                         part_depth, 
                         xyz
                     )
-                    if global_idx is not None and not global_idx in self.global_idx:
-                        self.global_idx.append(global_idx)
+                    if g_idx is not None and not g_idx in global_idx:
+                        global_idx.append(g_idx)
+                        center_idx.append(center)
                         tmp_neighbours.append(neighbours)
                         coords_intersects.append(intersection)
                         lengths.append(length)
 
             self.neighbours = tmp_neighbours
         
-        return coords_intersects, lengths
+        return coords_intersects, global_idx, center_idx, lengths
     
 
-    def calculate_TEC(self, line: NDArray, show: bool = False):
-        coords_intersects, lengths = self.calculate_lens(line)
+    def calculate_TEC(
+            self, 
+            start_line: list[float], 
+            end_line: list[float], 
+            date: datetime,
+            show: bool = False
+        ):
+        yday = date.timetuple().tm_yday       
+        UT = date.hour + date.minute / 60. + date.second / 3600.
+
+        start_xyz = self.latlon_to_xyz(start_line[0], start_line[1], start_line[2])  # in x, y, z
+        end_xyz = self.latlon_to_xyz(end_line[0], end_line[1], end_line[2]) # in x, y, z
+
+        # print(start_xyz)
+        # print(end_xyz)
+
+        line = np.array([start_xyz, end_xyz])
+        coords_intersects, global_idx, center_idx, lengths = self.calculate_lens(line)
         if show:
-            self.show_intersection_data(coords_intersects, self.global_idx, lengths)
+            self.show_intersection_data(coords_intersects, global_idx, lengths)
         coeff = [l/self.diagonal for l in lengths]
         tec = 0
-        for n, (x, y, z) in enumerate(self.global_idx):
-            tec += coeff[n] * self.global_arr[x][y][z]
-        return tec
+        center_llh = np.array([self.xyz_to_latlon(c[0], c[1], c[2]) for c in center_idx])
+        for n, (lat, lon, h) in enumerate(center_llh):
+            ne = get_ne(
+                yday,
+                UT, 
+                lat, 
+                lon, 
+                h, 
+                ne_0=self.ne_0, 
+                hmax=self.hmax, 
+                half_thickness=self.half_thickness
+            )
+            tec += lengths[n] * ne * 1000
+        return tec/1e16
+    
+    def latlon_to_xyz(self, lat, lon, height):
+        degrees_lat = np.degrees(lat)
+        degrees_lon = np.degrees(lon)
+        x = (degrees_lat + 90) / 180 * self.global_size[0] # широта -90 90
+        y = (degrees_lon + 180) / 360 * self.global_size[1] # долгота -180 180
+        z = height / 1000 #km
+        return x, y, z
+    
+    def xyz_to_latlon(self, x, y, z):
+        degrees_lat = (x / self.global_size[0]) * 180 - 90
+        degrees_lon = (y / self.global_size[1]) * 360 - 180
+        lon = np.radians(degrees_lon)
+        lat = np.radians(degrees_lat)
+        height = z 
+        return lat, lon, height
 
 
     @classmethod
@@ -156,5 +217,23 @@ class ModelData:
             print(f"  End: {end}")
             print(f"  Length: {length}")
 
+    @classmethod
+    def lle_to_cart(self, lat, lon, elevation):
+        RE = 6378000.0
+        r = elevation + RE
+        x = r * cos(lat) * cos(lon)
+        y = r * cos(lat) * sin(lon)
+        z = r * sin(lat)
+        return x, y, z
+    
+    @classmethod
+    def convert_degrees_to_kms(self, degree):
+        return int(degree*KM_PER_DEGREE)
+    
+    @classmethod
+    def convert_kms_to_degree(self, km):
+        return int(km / KM_PER_DEGREE)
+
+    
 
 

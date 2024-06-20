@@ -16,7 +16,6 @@ def extract_gz(input_file: str, output_file:  str) -> None:
 
     os.remove(input_file)
 
-
 def get_sat_coords(
         input_file_gz: str, 
         satellite: str = 'G', 
@@ -41,6 +40,8 @@ def cart_to_xyz(lat: float, lon: float, h: float):
     z = (RE + h) * math.sin(lat)
     
     return x, y, z
+
+
     
 
 

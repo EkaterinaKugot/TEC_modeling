@@ -12,6 +12,9 @@ numpy = "^2.0.0"
 scipy = "^1.13.1"
 simurg-core = {git = "https://git.iszf.irk.ru/simurg/simurg_core.git"}
 coordinates = {git = "https://github.com/gnss-lab/coordinates.git"}
+matplotlib = "^3.9.0"
+requests = "^2.32.3"
+seaborn = "^0.13.2"
 
 
 [build-system]
