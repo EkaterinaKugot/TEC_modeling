@@ -2,7 +2,6 @@ from coordinates.sat import satellite_xyz
 import gzip
 import shutil
 import os
-import math
 from datetime import datetime
 
 FILE_FOLDER = "./data"
@@ -18,8 +17,8 @@ def extract_gz(input_file: str, output_file:  str) -> None:
 
 def get_sat_coords(
         input_file_gz: str, 
-        satellite: str = 'G', 
-        number: int = 1, 
+        satellite: str = 'C', 
+        number: int = 40, 
         epoch: datetime = datetime(2024, 1, 1, 12, 0, 0)
     ) -> tuple[float]:
     input_file = f"{FILE_FOLDER}/{input_file_gz}"
@@ -32,14 +31,6 @@ def get_sat_coords(
 
     x, y, z = satellite_xyz(output_file, satellite, number, epoch)
     return x, y, z #m
-
-def cart_to_xyz(lat: float, lon: float, h: float):
-
-    x = (RE + h) * math.cos(lat) * math.cos(lon)
-    y = (RE + h) * math.cos(lat) * math.sin(lon)
-    z = (RE + h) * math.sin(lat)
-    
-    return x, y, z
 
 
     

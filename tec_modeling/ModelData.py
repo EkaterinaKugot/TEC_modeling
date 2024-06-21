@@ -1,21 +1,22 @@
 import numpy as np
 from numpy.typing import NDArray
-from simurg_core.geometry.coord import cart_to_lle
-from simurg_core.models.simple_tec import get_ne
+from math import sin, cos
 from datetime import datetime
 
-from math import sin, cos
+from simurg_core.models.simple_tec import get_ne
+
+
 
 KM_PER_DEGREE = 111
 
 class ModelData:
     def __init__(self, part_size: tuple[int], start_h_from_ground: int, end_h_from_ground: int):
-        self.global_size = (180*KM_PER_DEGREE, 360*KM_PER_DEGREE, end_h_from_ground)
         self.part_size = part_size
+        self.global_size = (180*KM_PER_DEGREE, 360*KM_PER_DEGREE, end_h_from_ground)
         self.number_part = (
             self.global_size[0] // self.part_size[0],
             self.global_size[1] // self.part_size[1],
-            self.global_size[2] // self.part_size[2]
+            self.global_size[2] // self.part_size[2] - start_h_from_ground // self.part_size[2]
         )
         self.start_h_from_ground = start_h_from_ground
 
@@ -25,7 +26,6 @@ class ModelData:
 
         self.diagonal = np.sqrt(self.part_size[0]**2 + self.part_size[1]**2 + self.part_size[2]**2)
 
-        self.global_idx = []
         self.neighbours = []
 
     
@@ -126,6 +126,9 @@ class ModelData:
                             self.neighbours.append(neighbours)
                             coords_intersects.append(intersection)
                             lengths.append(length)
+                            if g_idx[2] == self.global_size[2] // self.part_size[2] - 1 and \
+                            line[0][0] == line[1][0] and line[0][1] == line[1][1]:
+                                return coords_intersects, global_idx, center_idx, lengths
         else:
             tmp_neighbours = []
             for i in self.neighbours:
@@ -144,8 +147,15 @@ class ModelData:
                         tmp_neighbours.append(neighbours)
                         coords_intersects.append(intersection)
                         lengths.append(length)
+                        if g_idx[2] == self.global_size[2] // self.part_size[2] - 1 and \
+                            line[0][0] == line[1][0] and line[0][1] == line[1][1]:
+                                self.neighbours = tmp_neighbours
+                                return coords_intersects, global_idx, center_idx, lengths
 
             self.neighbours = tmp_neighbours
+            if len(global_idx) < self.number_part[2]:
+                self.neighbours = []
+                return self.calculate_lens(line)
         
         return coords_intersects, global_idx, center_idx, lengths
     
@@ -163,11 +173,10 @@ class ModelData:
         start_xyz = self.latlon_to_xyz(start_line[0], start_line[1], start_line[2])  # in x, y, z
         end_xyz = self.latlon_to_xyz(end_line[0], end_line[1], end_line[2]) # in x, y, z
 
-        # print(start_xyz)
-        # print(end_xyz)
-
+        
         line = np.array([start_xyz, end_xyz])
         coords_intersects, global_idx, center_idx, lengths = self.calculate_lens(line)
+        
         if show:
             self.show_intersection_data(coords_intersects, global_idx, lengths)
         coeff = [l/self.diagonal for l in lengths]
@@ -203,7 +212,6 @@ class ModelData:
         height = z 
         return lat, lon, height
 
-
     @classmethod
     def show_intersection_data(
         self, 
@@ -216,23 +224,16 @@ class ModelData:
             print(f"  Start: {start}")
             print(f"  End: {end}")
             print(f"  Length: {length}")
-
-    @classmethod
-    def lle_to_cart(self, lat, lon, elevation):
-        RE = 6378000.0
-        r = elevation + RE
-        x = r * cos(lat) * cos(lon)
-        y = r * cos(lat) * sin(lon)
-        z = r * sin(lat)
-        return x, y, z
     
     @classmethod
-    def convert_degrees_to_kms(self, degree):
+    def convert_radians_to_kms(self, rad):
+        degree = np.degrees(rad)
         return int(degree*KM_PER_DEGREE)
     
     @classmethod
-    def convert_kms_to_degree(self, km):
-        return int(km / KM_PER_DEGREE)
+    def convert_kms_to_radians(self, km):
+        degree = int(km / KM_PER_DEGREE)
+        return np.radians(degree)
 
     
 
