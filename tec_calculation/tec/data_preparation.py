@@ -3,6 +3,8 @@ import gzip
 import shutil
 import os
 from datetime import datetime
+import json
+import requests
 
 FILE_FOLDER = "./data"
 
@@ -31,7 +33,6 @@ def get_sat_coords(
 
     x, y, z = satellite_xyz(output_file, satellite, number, epoch)
     return x, y, z #m
-
 
     
 
