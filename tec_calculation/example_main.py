@@ -22,7 +22,7 @@ end_h_from_ground = 1000
 start_date = datetime(2024, 1, 1)
 end_date = start_date + timedelta(days=1)
 
-input_file = "BRDC00IGS_R_20240010000_01D_MN.rnx.gz"
+input_file = "2024-01-01.rnx.gz"
 
 my_tecs = []
 model_tec = []

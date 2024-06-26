@@ -17,12 +17,7 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
     size_data = 7
     layout = html.Div(
         [
-            dcc.Store(id="region-site-names-store", storage_type="session"),
-            dcc.Store(id="local-file-store", storage_type="session"),
-            dcc.Store(id="site-coords-store", storage_type="session"),
-            dcc.Store(id="site-data-store", storage_type="session"),
-            dcc.Store(id="satellites-options-store", storage_type="session"),
-            dcc.Store(id="downloading-file-store", storage_type="session"),
+            dcc.Store(id="all-sites-store", storage_type="session", data=all_sites),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -72,13 +67,18 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
 
 def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
     site_map = create_site_map(all_sites)
+    download_window = _create_download_window()
     open_window = _create_open_window()
     selection_satellites = _create_empty_selection_satellites()
     left_side = [
         dbc.Row(
             dbc.Col(
                     [
-                        open_window,
+                        download_window,
+                        html.Div(
+                            open_window,
+                            style={"margin-left": "15px"},
+                        ),
                         html.Div(
                             selection_satellites,
                             style={"margin-left": "15px"},
@@ -126,6 +126,59 @@ def create_site_map(all_sites: list[list[str | float]]) -> go.Figure:
     )
 
     return figure
+
+def _create_download_window() -> html.Div:
+    download_window = html.Div(
+        [
+            dbc.Button(language["buttons"]["download"], id="download"),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle(language["buttons"]["download"])
+                    ),
+                    dbc.ModalBody(
+                        [
+                            dbc.Label(
+                                language["download_window"]["label"],
+                                style={"font-size": "18px"},
+                            ),
+                            dcc.DatePickerSingle(
+                                id="date-selection",
+                                min_date_allowed=date(1998, 1, 1),
+                                max_date_allowed=datetime.now()
+                                - timedelta(days=1),
+                                display_format="YYYY-MM-DD",
+                                placeholder="YYYY-MM-DD",
+                                date=datetime.now().strftime("%Y-%m-%d"),
+                                style={"margin-left": "15px"},
+                            ),
+                            html.Div(
+                                dbc.Button(
+                                    language["buttons"]["download"],
+                                    id="download-file",
+                                    style={"margin-left": "10px"},
+                                ),
+                                style={
+                                    "text-align": "center",
+                                    "margin-top": "20px",
+                                },
+                            ),
+                            html.Div(
+                                "",
+                                id="downloaded",
+                                style={
+                                    "visibility": "hidden",
+                                },
+                            ),
+                        ]
+                    ),
+                ],
+                id="download-window",
+                is_open=False,
+            ),
+        ]
+    )
+    return download_window
 
 def _create_open_window() -> html.Div:
     open_window = html.Div(
