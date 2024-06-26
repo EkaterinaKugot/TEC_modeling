@@ -134,7 +134,7 @@ def _create_download_window() -> html.Div:
             dbc.Modal(
                 [
                     dbc.ModalHeader(
-                        dbc.ModalTitle(language["buttons"]["download"])
+                        dbc.ModalTitle(language["download_window"]["title"])
                     ),
                     dbc.ModalBody(
                         [

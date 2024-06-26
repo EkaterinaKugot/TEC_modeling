@@ -16,12 +16,13 @@ languages = {
             "selection-satellites": "Спутник",
         },
         "tab-adding-site":{
-            "label": "Добавление станции",
+            "label": "Добавление виртуальной станции",
             "lat": "Широта",
             "lon": "Долгота",
             "name": "Имя",
         },
         "download_window": {
+            "title": "Скачать навигационный файл",
             "label": "Дата",
             "successаfuly": "Файл загружается",
             "unsuccessаfuly": "Дата введена неверно",
@@ -50,12 +51,13 @@ languages = {
             "selection-satellites": "Satellite",
         },
         "tab-adding-site":{
-            "label": "Adding a site",
+            "label": "Adding a virtual site",
             "lat": "Latitude",
             "lon": "Longitude",
             "name": "Name",
         },
         "download_window": {
+            "title": "Download navigation file",
             "label": "Date",
             "successаfuly": "File is loading",
             "unsuccessаfuly": "The date is entered incorrectly",
