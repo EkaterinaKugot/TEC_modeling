@@ -97,3 +97,55 @@ def register_callbacks(app: dash.Dash) -> None:
         except:
             pass
         return not is_open, options
+    
+
+    @app.callback(
+        [
+            Output("graph-site-map", "figure", allow_duplicate=True),
+            Output("site-lat", "invalid"),
+            Output("site-lon", "invalid"),
+            Output("site-name", "invalid"),
+            Output("all-sites-store", "data", allow_duplicate=True),
+        ],
+        [Input("add-site", "n_clicks")],
+        [
+            State("site-lat", "value"),
+            State("site-lon", "value"),
+            State("site-name", "value"),
+            State("all-sites-store", "data"),
+        ],
+        prevent_initial_call=True,
+    )
+    def add_new_site(
+        n: int,
+        site_lat: float,
+        site_lon: float,
+        site_name: str,
+        all_sites_store: list[list[str | float]]
+    ) -> list[go.Figure | bool | list[list[str | float]]]:
+        figure = create_site_map(all_sites_store)
+        return_value_list = [
+            figure,
+            False,
+            False,
+            False,
+            all_sites_store,
+        ]
+        if site_lat is None:
+            return_value_list[1] = True
+        if site_lon is None:
+            return_value_list[2] = True
+        if site_name is None:
+            return_value_list[3] = True
+
+        if True in return_value_list:
+            return return_value_list
+        else:
+            all_sites_store.append([site_name, "", site_lat, site_lon])
+            return_value_list[4] = all_sites_store
+            figure = create_site_map(all_sites_store)
+            return_value_list[0] = figure
+        return return_value_list
+
+
+        

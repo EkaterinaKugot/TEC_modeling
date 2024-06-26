@@ -5,8 +5,7 @@ languages = {
             "open": "Открыть",
             "settings": "Настройки",
             "clear-all": "Очистить всё",
-            "apply-selection-by-region": "Применить",
-            "clear-selection-by-region": "Очистить выборку",
+            "add-site": "Добавить",
         },
         "data-tab": {
             "label": "Данные",
@@ -18,6 +17,9 @@ languages = {
         },
         "tab-adding-site":{
             "label": "Добавление станции",
+            "lat": "Широта",
+            "lon": "Долгота",
+            "name": "Имя",
         },
         "download_window": {
             "label": "Дата",
@@ -37,8 +39,7 @@ languages = {
             "open": "Open",
             "settings": "Settings",
             "clear-all": "Сlear all",
-            "apply-selection-by-region": "Apply",
-            "clear-selection-by-region": "Clear selection",
+            "add-site": "Add",
         },
         "data-tab": {
             "label": "Data products series",
@@ -50,6 +51,9 @@ languages = {
         },
         "tab-adding-site":{
             "label": "Adding a site",
+            "lat": "Latitude",
+            "lon": "Longitude",
+            "name": "Name",
         },
         "download_window": {
             "label": "Date",

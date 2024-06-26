@@ -11,7 +11,7 @@ language = languages["en"]
 def create_layout(all_sites: list[list[str | float]]) -> html.Div:
     left_side = _create_left_side(all_sites)
     data_tab = _create_data_tab()
-    tab_lat_lon = _create_selection_tab_lat_lon()
+    site_addition = _create_site_addition()
 
     size_map = 5
     size_data = 7
@@ -40,7 +40,7 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
                                     },
                                 ),
                                 dbc.Tab(
-                                    tab_lat_lon,
+                                    site_addition,
                                     label=language["tab-adding-site"]["label"],
                                     label_style={"color": "gray"},
                                     active_label_style={
@@ -335,8 +335,56 @@ def _create_input_shift() -> dbc.Input:
     )
     return input
 
-def _create_selection_tab_lat_lon() -> list[dbc.Row]:
-    tab_lat_lon = [
-        
+def _create_site_addition() -> list[dbc.Row]:
+    site_addition = [
+        dbc.Row(
+            [
+                dbc.Label(language["tab-adding-site"]["lat"], width=2),
+                dbc.Col(
+                    dbc.Input(
+                        type="number",
+                        id="site-lat",
+                        min=-90,
+                        max=90,
+                        invalid=False,
+                    ),
+                    width=4,
+                    style={"margin-left": "-30px"},
+                ),
+                dbc.Label(language["tab-adding-site"]["lon"], width=2),
+                dbc.Col(
+                    dbc.Input(
+                        type="number",
+                        id="site-lon",
+                        min=-180,
+                        max=180,
+                        invalid=False,
+                    ),
+                    width=4,
+                    style={"margin-left": "-30px"},
+                ),
+            ],
+            style={"margin-top": "30px", "margin-left": "25px"},
+        ),
+        dbc.Row(
+            [
+                dbc.Label(language["tab-adding-site"]["name"], width=2),
+                dbc.Col(
+                    dbc.Input(
+                        type="text",
+                        id="site-name",
+                        invalid=False,
+                    ),
+                    width=4,
+                    style={"margin-left": "-30px"},
+                ),
+            ],
+            style={"margin-top": "15px", "margin-left": "25px"},
+        ),
+        dbc.Button(
+            language["buttons"]["add-site"],
+            id="add-site",
+            style={"margin-top": "20px"},
+        ),
     ]
-    return tab_lat_lon
+    return site_addition
