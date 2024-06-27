@@ -6,6 +6,7 @@ languages = {
             "settings": "Настройки",
             "clear-all": "Очистить всё",
             "add-site": "Добавить",
+            "build": "Построить",
         },
         "data-tab": {
             "label": "Данные",
@@ -31,8 +32,13 @@ languages = {
             "unknown": "Неизвестно",
         },
         "open_window": {
+            "title": "Открыть навигационный файл",
             "label": "Файл",
         },
+        "hour_selection": {
+            "date": "Дата",
+            "hour": "Час",
+        }
     },
     "en": {
         "buttons": {
@@ -41,6 +47,7 @@ languages = {
             "settings": "Settings",
             "clear-all": "Сlear all",
             "add-site": "Add",
+            "build": "Build",
         },
         "data-tab": {
             "label": "Data products series",
@@ -66,7 +73,12 @@ languages = {
             "unknown": "Unknown",
         },
         "open_window": {
+            "title": "Open navigation file",
             "label": "File",
         },
+        "hour_selection": {
+            "date": "Date",
+            "hour": "Hour",
+        }
     },
 }

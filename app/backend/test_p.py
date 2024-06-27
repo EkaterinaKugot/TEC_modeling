@@ -25,8 +25,8 @@ date = datetime(2024, 1, 1, 18, 0, 0)
 yday = date.timetuple().tm_yday       
 UT = date.hour + date.minute / 60. + date.second / 3600.
 
-lat_step = 5
-lon_step = 5
+lat_step = 1
+lon_step = 1
 lat_range = list(range(-90, 90, lat_step))
 lon_range = list(range(-180, 180, lon_step))
 

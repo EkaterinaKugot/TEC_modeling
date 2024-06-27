@@ -18,6 +18,7 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
     layout = html.Div(
         [
             dcc.Store(id="all-sites-store", storage_type="session", data=all_sites),
+            dcc.Store(id="date-store", storage_type="session"),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -70,6 +71,7 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
     download_window = _create_download_window()
     open_window = _create_open_window()
     selection_satellites = _create_empty_selection_satellites()
+    hour_selection = _create_hour_selection()
     left_side = [
         dbc.Row(
             dbc.Col(
@@ -92,11 +94,49 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
             style={"margin-top": "20px"}
         ),
         dbc.Row(
-            html.Img(src="assets/tec.png", style={"height": "300px"}),
+            hour_selection,
+            id="row_hour_selection",
+            style={"visibility": "hidden"}
+        ),
+        dbc.Row(
+            html.Img(src="", style={"height": "300px", "visibility": "hidden"}),
             style={"margin-top": "10px"}
         ),
     ]
     return left_side
+
+def _create_hour_selection() -> list[html.Div]:
+    hour_selection = [
+        dbc.Label(language["hour_selection"]["date"], width=1),
+        dbc.Col(
+            dbc.Input(
+                type="text",
+                id="date",
+                readonly=True,
+                style={"width": "120px"},
+            ),
+            width=3
+        ),
+        dbc.Label(language["hour_selection"]["hour"], width=1),
+        dbc.Col(
+            dbc.Input(
+                type="number",
+                min=0,
+                max=23,
+                step=1,
+                value=0,
+                id="hour",
+                invalid=False,
+                style={"width": "80px"}
+            ),
+            width=2
+        ),
+        dbc.Col(
+            dbc.Button(language["buttons"]["build"], id="build-ver-tec"),
+        )
+    ]
+    return hour_selection
+
 
 def create_site_map(all_sites: list[list[str | float]]) -> go.Figure:
     site_map = go.Scattergeo(
@@ -187,7 +227,7 @@ def _create_open_window() -> html.Div:
             dbc.Modal(
                 [
                     dbc.ModalHeader(
-                        dbc.ModalTitle(language["buttons"]["open"])
+                        dbc.ModalTitle(language["open_window"]["title"])
                     ),
                     dbc.ModalBody(
                         [
@@ -204,7 +244,7 @@ def _create_open_window() -> html.Div:
                                         id="select-file",
                                         options=[],
                                         style={
-                                            "width": "50%",
+                                            "width": "40%",
                                             "margin-left": "15px",
                                         },
                                     ),

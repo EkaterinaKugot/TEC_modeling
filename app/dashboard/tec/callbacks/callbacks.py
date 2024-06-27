@@ -98,6 +98,26 @@ def register_callbacks(app: dash.Dash) -> None:
             pass
         return not is_open, options
     
+    @app.callback(
+        [
+            Output("date-store", "data", allow_duplicate=True),
+            Output("date", "value", allow_duplicate=True),
+            Output("row_hour_selection", "style", allow_duplicate=True),
+            Output("open-window", "is_open", allow_duplicate=True),
+        ],
+        [Input("open-file", "n_clicks")],
+        [
+            State("select-file", "value"),
+            State("open-window", "is_open"),
+         ],
+        prevent_initial_call=True,
+    )
+    def open_file(
+        n: int,
+        filename: str,
+        is_open: bool
+    ) -> list[str | bool | dict[str, str]]:
+        return filename, filename, {"margin-top": "20px"}, not is_open
 
     @app.callback(
         [
@@ -123,9 +143,9 @@ def register_callbacks(app: dash.Dash) -> None:
         site_name: str,
         all_sites_store: list[list[str | float]]
     ) -> list[go.Figure | bool | list[list[str | float]]]:
-        figure = create_site_map(all_sites_store)
+        site_map = create_site_map(all_sites_store)
         return_value_list = [
-            figure,
+            site_map,
             False,
             False,
             False,
@@ -143,9 +163,40 @@ def register_callbacks(app: dash.Dash) -> None:
         else:
             all_sites_store.append([site_name, "", site_lat, site_lon])
             return_value_list[4] = all_sites_store
-            figure = create_site_map(all_sites_store)
-            return_value_list[0] = figure
+            site_map = create_site_map(all_sites_store)
+            return_value_list[0] = site_map
         return return_value_list
+    
+
+    
+    @app.callback(
+        [
+            Output("graph-site-map", "figure"),
+            Output("date", "value"),
+            Output("hour", "value"),
+            Output("row_hour_selection", "style"),
+        ],
+        [Input("url", "pathname")],
+        [
+            State("all-sites-store", "data"),
+            State("date-store", "data"),
+            State("hour", "value"),
+        ],
+    )
+    def update_all(
+        pathname: str,
+        all_sites_store: list[list[str | float]],
+        date_store: str,
+        hour: int
+    ) -> list[go.Figure]:
+        if date_store is not None:
+            filename = date_store
+            style = {"margin-top": "20px"}
+        else:
+            filename = "none"
+            style = {"visibility": "hidden"}
+        site_map = create_site_map(all_sites_store)
+        return site_map, filename, hour, style
 
 
         
