@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.typing import NDArray
-from math import sin, cos
 from datetime import datetime
 
 from simurg_core.models.simple_tec import get_ne

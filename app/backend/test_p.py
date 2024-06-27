@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from simurg_core.models.simple_tec import get_tec
-from tec_modeling import ModelData
+from tec_calculation.ModelData import ModelData
 from datetime import datetime
 import logging
 import time

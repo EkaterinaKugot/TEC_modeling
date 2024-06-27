@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "tec_calculation"
+name = "backend"
 version = "0.1.0"
 description = ""
 authors = ["EkaterinaKugot <kali.kugot@yandex.ru>"]
@@ -8,13 +8,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-numpy = "^2.0.0"
-scipy = "^1.13.1"
-simurg-core = {git = "https://git.iszf.irk.ru/simurg/simurg_core.git"}
 coordinates = {git = "https://github.com/gnss-lab/coordinates.git"}
 matplotlib = "^3.9.0"
 requests = "^2.32.3"
 fastapi = "^0.111.0"
+tec-calculation = {path = "../../libs/tec_calculation"}
 
 
 [build-system]

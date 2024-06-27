@@ -1,6 +1,7 @@
-from tec import ModelData, get_sat_coords
+from tec import get_sat_coords
 from simurg_core.models.simple_tec import get_tec
 from simurg_core.geometry.coord import cart_to_lle, xyz_to_el_az
+from tec_calculation.ModelData import ModelData
 
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
