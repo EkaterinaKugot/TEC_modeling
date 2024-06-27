@@ -35,9 +35,9 @@ languages = {
             "title": "Открыть навигационный файл",
             "label": "Файл",
         },
-        "hour_selection": {
+        "time_selection": {
             "date": "Дата",
-            "hour": "Час",
+            "time": "Время",
         }
     },
     "en": {
@@ -76,9 +76,9 @@ languages = {
             "title": "Open navigation file",
             "label": "File",
         },
-        "hour_selection": {
+        "time_selection": {
             "date": "Date",
-            "hour": "Hour",
+            "time": "Time",
         }
     },
 }

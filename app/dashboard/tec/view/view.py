@@ -71,7 +71,7 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
     download_window = _create_download_window()
     open_window = _create_open_window()
     selection_satellites = _create_empty_selection_satellites()
-    hour_selection = _create_hour_selection()
+    time_selection = _create_time_selection()
     left_side = [
         dbc.Row(
             dbc.Col(
@@ -94,48 +94,44 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
             style={"margin-top": "20px"}
         ),
         dbc.Row(
-            hour_selection,
-            id="row_hour_selection",
+            time_selection,
+            id="row_time_selection",
             style={"visibility": "hidden"}
         ),
         dbc.Row(
-            html.Img(src="", style={"height": "300px", "visibility": "hidden"}),
+            html.Img(src="", style={"height": "300px", "visibility": "hidden"}, id="img-ver-tec"),
             style={"margin-top": "10px"}
         ),
     ]
     return left_side
 
-def _create_hour_selection() -> list[html.Div]:
-    hour_selection = [
-        dbc.Label(language["hour_selection"]["date"], width=1),
+def _create_time_selection() -> list[html.Div]:
+    time_selection = [
+        dbc.Label(language["time_selection"]["date"], width=1),
         dbc.Col(
             dbc.Input(
                 type="text",
                 id="date",
                 readonly=True,
-                style={"width": "120px"},
             ),
             width=3
         ),
-        dbc.Label(language["hour_selection"]["hour"], width=1),
+        dbc.Label(language["time_selection"]["time"], width=1),
         dbc.Col(
             dbc.Input(
-                type="number",
-                min=0,
-                max=23,
-                step=1,
-                value=0,
-                id="hour",
+                type="text",
+                id="time",
+                value='00:00:00',
+                pattern='^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$',
                 invalid=False,
-                style={"width": "80px"}
             ),
-            width=2
+            width=3
         ),
         dbc.Col(
             dbc.Button(language["buttons"]["build"], id="build-ver-tec"),
         )
     ]
-    return hour_selection
+    return time_selection
 
 
 def create_site_map(all_sites: list[list[str | float]]) -> go.Figure:

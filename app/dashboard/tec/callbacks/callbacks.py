@@ -3,9 +3,9 @@ import plotly.graph_objects as go
 from ..view import *
 import dash
 from numpy.typing import NDArray
-import time
 import requests
-from requests.exceptions import HTTPError
+import re
+from datetime import datetime, timedelta, timezone
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -102,7 +102,7 @@ def register_callbacks(app: dash.Dash) -> None:
         [
             Output("date-store", "data", allow_duplicate=True),
             Output("date", "value", allow_duplicate=True),
-            Output("row_hour_selection", "style", allow_duplicate=True),
+            Output("row_time_selection", "style", allow_duplicate=True),
             Output("open-window", "is_open", allow_duplicate=True),
         ],
         [Input("open-file", "n_clicks")],
@@ -118,6 +118,35 @@ def register_callbacks(app: dash.Dash) -> None:
         is_open: bool
     ) -> list[str | bool | dict[str, str]]:
         return filename, filename, {"margin-top": "20px"}, not is_open
+    
+    @app.callback(
+        [
+            Output("img-ver-tec", "src", allow_duplicate=True),
+            Output("img-ver-tec", "style", allow_duplicate=True),
+            Output("time", "invalid", allow_duplicate=True),
+        ],
+        [Input("build-ver-tec", "n_clicks")],
+        [
+            State("date-store", "data"),
+            State("time", "value")
+         ],
+        prevent_initial_call=True,
+    )
+    def show_vertical_tec(
+        n: int,
+        date_store: str,
+        time_str: str
+    ):
+        pattern = r'^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$'
+        match = re.match(pattern, time_str)
+        if match is None:
+            return "", {"visibility": "hidden"}, True
+        else:
+            date_str = f"{date_store} {time_str}"
+            date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+            
+
+
 
     @app.callback(
         [
@@ -173,21 +202,21 @@ def register_callbacks(app: dash.Dash) -> None:
         [
             Output("graph-site-map", "figure"),
             Output("date", "value"),
-            Output("hour", "value"),
-            Output("row_hour_selection", "style"),
+            Output("time", "value"),
+            Output("row_time_selection", "style"),
         ],
         [Input("url", "pathname")],
         [
             State("all-sites-store", "data"),
             State("date-store", "data"),
-            State("hour", "value"),
+            State("time", "value"),
         ],
     )
     def update_all(
         pathname: str,
         all_sites_store: list[list[str | float]],
         date_store: str,
-        hour: int
+        tec_time: int
     ) -> list[go.Figure]:
         if date_store is not None:
             filename = date_store
@@ -196,7 +225,7 @@ def register_callbacks(app: dash.Dash) -> None:
             filename = "none"
             style = {"visibility": "hidden"}
         site_map = create_site_map(all_sites_store)
-        return site_map, filename, hour, style
+        return site_map, filename, tec_time, style
 
 
         
