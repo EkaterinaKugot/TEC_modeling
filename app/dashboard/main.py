@@ -8,12 +8,7 @@ app = Dash(
 )
 server = app.server
 
-rq = requests.post("https://simurg.iszf.irk.ru/api", 
-                    json={"method": "get_site", "args": {}} 
-                    )
-all_sites = rq.json()
-
-app.layout = create_layout(all_sites)
+app.layout = create_layout()
 
 register_callbacks(app)
 

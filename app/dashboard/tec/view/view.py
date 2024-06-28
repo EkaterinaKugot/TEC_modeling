@@ -9,8 +9,8 @@ import numpy as np
 
 language = languages["en"]
 
-def create_layout(all_sites: list[list[str | float]]) -> html.Div:
-    left_side = _create_left_side(all_sites)
+def create_layout() -> html.Div:
+    left_side = _create_left_side()
     data_tab = _create_data_tab()
     site_addition = _create_site_addition()
 
@@ -18,10 +18,11 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
     size_data = 7
     layout = html.Div(
         [
-            dcc.Store(id="all-sites-store", storage_type="session", data=all_sites),
+            dcc.Store(id="all-sites-store", storage_type="session"),
             dcc.Store(id="date-store", storage_type="session"),
             dcc.Store(id="ver-date-store", storage_type="session"),
             dcc.Store(id="ver-tec-store", storage_type="session"),
+            dcc.Store(id="all-sats-store", storage_type="session"),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -69,11 +70,10 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
     )
     return layout
 
-def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
-    site_map = create_site_map(all_sites)
+def _create_left_side() -> list[dbc.Row]:
+    site_map = create_site_map()
     download_window = _create_download_window()
     open_window = _create_open_window()
-    selection_satellites = _create_empty_selection_satellites()
     time_selection = _create_time_selection()
     vertical_tec_map = create_vertical_tec_map()
     left_side = [
@@ -85,10 +85,7 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
                             open_window,
                             style={"margin-left": "15px"},
                         ),
-                        html.Div(
-                            selection_satellites,
-                            style={"margin-left": "15px"},
-                        ),
+                        
                     ],
                     style={"display": "flex", "justify-content": "flex-start"},
                 ) 
@@ -142,6 +139,8 @@ def _create_time_selection() -> list[html.Div]:
                 value='00:00:00',
                 pattern='^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$',
                 invalid=False,
+                persistence='00:00:00',
+                persistence_type="session",
             ),
             width=3
         ),
@@ -200,11 +199,12 @@ def create_vertical_tec_map(ver_tec: list[dict[str, float | int]] = list()) -> g
     return fig
 
 
-def create_site_map(all_sites: list[list[str | float]]) -> go.Figure:
+def create_site_map(all_sites: list[list[str | float]] = []) -> go.Figure:
+    text = [f"{point[0]} ({point[1]})" for point in all_sites]
     site_map = go.Scattergeo(
         lon = [point[3] for point in all_sites],
         lat = [point[2] for point in all_sites],
-        text = [point[0] for point in all_sites],
+        text = text,
         mode="markers",
         marker=dict(size=4, color="Silver", line=dict(color="gray", width=1)),
         hoverlabel=dict(bgcolor="white"),
@@ -219,9 +219,9 @@ def create_site_map(all_sites: list[list[str | float]]) -> go.Figure:
     )
     figure.update_geos(
         landcolor="white",
-        showcountries=True,  # показывать границы стран
-        showrivers=True,     # показывать реки
-        rivercolor='RoyalBlue',   # цвет линий рек
+        showcountries=True, 
+        showrivers=True,    
+        rivercolor='RoyalBlue',   
         showland=True,
         showlakes=True,
         lakecolor='RoyalBlue'
@@ -336,29 +336,61 @@ def _create_open_window() -> html.Div:
     )
     return open_window
 
-def _create_empty_selection_satellites() -> dbc.Select:
-    select = dbc.Select(
-        id="selection-satellites",
-        options=[],
-        placeholder=language["data-tab"]["selection-satellites"],
-        style={"width": "150px", "margin-right": "20px"},
-        persistence=True,
-        persistence_type="session",
-    )
-    return select
-
 def _create_data_tab() -> list[dbc.Row]:
     site_data = create_site_data()
     time_slider = _create_time_slider()
     input_shift = _create_input_shift()
+    selection_satellites = create_selection_satellites()
+    input_sites = _create_input_sites()
+    input_period_time = _create_input_period_time()
+    selection_network = create_selection_network()
+    input_lat = _create_input_lat()
+    input_lon = _create_input_lon()
+    input_z_step = _create_input_z_step()
     data_tab = [
         dbc.Row(
+            dbc.Col(
+                [
+                    html.Div(
+                        input_lat,
+                    ),
+                    html.Div(
+                        input_lon,
+                    ),
+                    html.Div(
+                        input_z_step,
+                    ),
+                    html.Div(
+                        input_sites,
+                    ),
+                    html.Div(
+                        selection_network,
+                        id="div-selection-network",
+                    ),
+                    html.Div(
+                        selection_satellites,
+                        id="div-selection-satellites",
+                    ),
+                    html.Div(
+                        input_period_time,
+                        id="div-input-period-time",
+                    ),
+                    dbc.Button(
+                        language["buttons"]["build"],
+                        id="calculate-tec",
+                    ),
+                ],
+                style={"display": "flex", "justify-content": "flex-end"},
+            ),
+            style={"margin-top": "20px"}
+        ),
+        dbc.Row(
             dcc.Graph(id="graph-site-data", figure=site_data),
-            style={"margin-top": "20px"},
+            style={"margin-top": "10px"},
         ),
         dbc.Row(
             html.Div(time_slider, id="div-time-slider"),
-            style={"margin-top": "25px"},
+            style={"margin-top": "20px"},
         ),
         dbc.Row(
             [
@@ -374,7 +406,7 @@ def _create_data_tab() -> list[dbc.Row]:
                 ),
             ],
             style={
-                "margin-top": "20px",
+                "margin-top": "10px",
             },
         ),
     ]
@@ -384,10 +416,10 @@ def create_site_data() -> go.Figure:
     site_data = go.Figure()
 
     site_data.update_layout(
-        title=language["data-tab"]["graph-site-data"]["title"],
+        # title=language["data-tab"]["graph-site-data"]["title"],
         title_font=dict(size=24, color="black"),
         plot_bgcolor="white",
-        margin=dict(l=0, t=60, r=0, b=0),
+        margin=dict(l=0, t=0, r=0, b=0),
         xaxis=dict(
             title=language["data-tab"]["graph-site-data"]["xaxis"],
             gridcolor="#E1E2E2",
@@ -433,7 +465,99 @@ def _create_input_shift() -> dbc.Input:
         value=-0.5,
         persistence=-0.5,
         persistence_type="session",
-        style={"width": "80px", "margin-right": "20px"},
+        style={"width": "80px", "margin-right": "15px"},
+    )
+    return input
+
+def create_selection_satellites(all_sats: list[tuple[str, int]] = []) -> dbc.Select:
+    options = [str(sat[0])+str(sat[1]) for sat in all_sats]
+    select = dbc.Select(
+        id="selection-satellites",
+        options=options,
+        placeholder=language["data-tab"]["selection-satellites"],
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "110px", "margin-right": "15px"},
+    )
+    return select
+
+def _create_input_sites() -> dbc.Input:
+    input = dbc.Input(
+        id="input-sites",
+        type="text",
+        placeholder=language["data-tab"]["selection-sites"],
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "110px", "margin-right": "5px"},
+    )
+    return input
+
+def create_selection_network(all_network: set[str] = []) -> dbc.Select:
+    select = dbc.Select(
+        id="selection_network",
+        options=all_network,
+        placeholder=language["data-tab"]["selection-network"],
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "120px", "margin-right": "10px"},
+    )
+    return select
+
+def _create_input_period_time() -> dbc.Input:
+    input = dbc.Input(
+        id="input-period-time",
+        type="number",
+        step="10",
+        min=10,
+        invalid=False,
+        placeholder=language["data-tab"]["input-period-time"],
+        persistence=True,
+        persistence_type="session",
+        style={"width": "80px", "margin-right": "15px"},
+    )
+    return input
+
+def _create_input_lat() -> dbc.Input:
+    input = dbc.Input(
+        id="input-lat",
+        type="number",
+        placeholder=language["data-tab"]["input-lat"],
+        min=-90,
+        max=90,
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "80px", "margin-right": "5px"},
+    )
+    return input
+
+def _create_input_lon() -> dbc.Input:
+    input = dbc.Input(
+        id="input-lon",
+        type="number",
+        placeholder=language["data-tab"]["input-lon"],
+        min=-180,
+        max=180,
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "80px", "margin-right": "5px"},
+    )
+    return input
+
+def _create_input_z_step() -> dbc.Input:
+    input = dbc.Input(
+        id="input-z",
+        type="number",
+        placeholder=language["data-tab"]["input-z"],
+        min=1,
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "90px", "margin-right": "15px"},
     )
     return input
 

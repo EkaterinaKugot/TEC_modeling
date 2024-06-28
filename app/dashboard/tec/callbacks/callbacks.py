@@ -109,12 +109,16 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("open-window", "is_open", allow_duplicate=True),
             Output("date-store", "data", allow_duplicate=True),
             Output("date", "value", allow_duplicate=True),
+
             Output("row_time_selection", "style", allow_duplicate=True),
             Output("row-graph-ver-tec", "style", allow_duplicate=True),
             Output("graph-ver-tec", "figure", allow_duplicate=True),
             Output("ver-tec-store", "data", allow_duplicate=True),
             Output("show-ver-tec", "disabled", allow_duplicate=True),
-             Output("ver-date-store", "data", allow_duplicate=True),
+            Output("ver-date-store", "data", allow_duplicate=True),
+
+            Output("all-sats-store", "data", allow_duplicate=True),
+            Output("div-selection-satellites", "children", allow_duplicate=True),
         ],
         [Input("open-file", "n_clicks")],
         [
@@ -133,6 +137,18 @@ def register_callbacks(app: dash.Dash) -> None:
             "justify-content": "center",
         }
         vertical_tec_map = create_vertical_tec_map()
+        all_sats = None
+        params = {"date": filename}
+        url = BASE_URL + "/get_all_sats"
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            all_sats = response.json()
+        else:
+            all_sats = []
+
+        selection_satellites = create_selection_satellites(all_sats)
+        if not all_sats:
+            all_sats = None
         return (
             not is_open,
             filename, 
@@ -142,7 +158,9 @@ def register_callbacks(app: dash.Dash) -> None:
             vertical_tec_map, 
             None,
             True,
-            None
+            None,
+            all_sats,
+            selection_satellites
         )
     
     @app.callback(
@@ -218,15 +236,6 @@ def register_callbacks(app: dash.Dash) -> None:
                 return True, None, result, vertical_tec_map, style_ver_tec
         return False, date, None, vertical_tec_map, style_ver_tec
 
-    def create_and_save_plot(date, result):
-        plt.imshow(result)
-        plt.colorbar(orientation='vertical')  
-        date_obj = datetime.fromisoformat(date)      
-        path_png = f"{FOLDER_PNG}/vertical_{date_obj.strftime('%Y-%m-%d_%H-%M-%S')}.png"
-        plt.savefig(path_png)
-        plt.close()
-        return path_png
-
 
     @app.callback(
         [
@@ -279,13 +288,15 @@ def register_callbacks(app: dash.Dash) -> None:
     
     @app.callback(
         [
+            Output("all-sites-store", "data"),
             Output("graph-site-map", "figure"),
             Output("date", "value"),
-            Output("time", "value"),
             Output("row_time_selection", "style"),
             Output("show-ver-tec", "disabled"),
             Output("graph-ver-tec", "figure"),
             Output("row-graph-ver-tec", "style"),
+            Output("div-selection-satellites", "children"),
+            Output("div-selection-network", "children"),
         ],
         [Input("url", "pathname")],
         [
@@ -293,6 +304,7 @@ def register_callbacks(app: dash.Dash) -> None:
             State("date-store", "data"),
             State("ver-date-store", "data"),
             State("ver-tec-store", "data"),
+            State("all-sats-store", "data")
         ],
     )
     def update_all(
@@ -300,7 +312,8 @@ def register_callbacks(app: dash.Dash) -> None:
         all_sites_store: list[list[str | float]],
         date_store: str,
         date: str,
-        ver_tec: str
+        ver_tec: str,
+        all_sats: list[tuple[str | int]]
     ) -> list[go.Figure | str | dict[str, str] | bool]:
         if date_store is not None:
             filename = date_store
@@ -313,20 +326,50 @@ def register_callbacks(app: dash.Dash) -> None:
             filename = "none"
             style_form = {"visibility": "hidden"}
             style_ver_tec = {"visibility": "hidden"}
+
+        all_sites = []
+        if all_sites_store is None:
+            url = BASE_URL + "/get_all_sites"
+            response = requests.get(url)
+            if response.status_code == 200:
+                all_sites = response.json()
+        else:
+            all_sites = all_sites_store
             
-        site_map = create_site_map(all_sites_store)
+        site_map = create_site_map(all_sites)
         disabled = True
-        time_str = "00:00:00"
         if date is not None:
-            disabled = False
-            date_obj = datetime.fromisoformat(date)   
-            time_str = date_obj.strftime('%H:%M:%S')
+            disabled = False  
 
         vertical_tec_map = create_vertical_tec_map()
         if ver_tec is not None:
             vertical_tec_map = create_vertical_tec_map(ver_tec) 
+
+        if all_sats is None:
+            all_sats = []
+
+        selection_satellites = create_selection_satellites(all_sats)
+
+        all_network = [site[1] for site in all_sites]
+        if all_network:
+            all_network = list(set(all_network))
+            all_network[0] = "-"
             
-        return site_map, filename, time_str, style_form, disabled, vertical_tec_map, style_ver_tec
+        selection_network = create_selection_network(all_network)
+
+        if not all_sites:
+            all_sites = None
+        return (
+            all_sites, 
+            site_map, 
+            filename, 
+            style_form, 
+            disabled, 
+            vertical_tec_map, 
+            style_ver_tec, 
+            selection_satellites,
+            selection_network
+        )
 
 
         

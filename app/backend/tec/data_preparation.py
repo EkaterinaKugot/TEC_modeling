@@ -1,4 +1,4 @@
-from coordinates.sat import satellite_xyz 
+from coordinates.sat import satellite_xyz, read_nav_data
 import gzip
 import shutil
 import os
@@ -9,7 +9,8 @@ from tec_calculation.ModelData import ModelData
 import json
 from numpy.typing import NDArray
 
-FILE_FOLDER = "./data"
+RNX_FOLDER = "./data"
+JSON_FOLDER = "/json"
 DOWNLOAD_URL = [
     "https://simurg.space/files2/{}/{}/nav/BRDC00IGS_R_{}{}0000_01D_MN.rnx.gz",
     "https://simurg.space/files2/{}/{}/nav/cddis.gsfc.nasa.gov/BRDC00IGS_R_{}{}0000_01D_MN.rnx.gz",
@@ -30,10 +31,12 @@ def get_sat_coords(
         number: int = 40, 
         epoch: datetime = datetime(2024, 1, 1, 12, 0, 0)
     ) -> tuple[float]:
-    input_file = f"{FILE_FOLDER}/{input_file_gz}"
+    if not os.path.exists(RNX_FOLDER):
+        os.makedirs(RNX_FOLDER)
+    input_file = f"{RNX_FOLDER}/{input_file_gz}"
 
     output_file_name = os.path.splitext(os.path.basename(input_file_gz))[0]
-    output_file = f"{FILE_FOLDER}/{output_file_name}"
+    output_file = f"{RNX_FOLDER}/{output_file_name}"
 
     if not os.path.exists(output_file):
         extract_gz(input_file, output_file)
@@ -42,7 +45,7 @@ def get_sat_coords(
     return x, y, z #m
 
 def load_file(date: str) -> None:
-    output_file = f"{FILE_FOLDER}/{date}.rnx.gz"
+    output_file = f"{RNX_FOLDER}/{date}.rnx.gz"
     datetime_date = datetime.strptime(date, '%Y-%m-%d')
 
     year = str(datetime_date.year)
@@ -71,22 +74,25 @@ def load_file(date: str) -> None:
 
     input_file = output_file
     output_file_name = os.path.splitext(os.path.basename(input_file))[0]
-    output_file = f"{FILE_FOLDER}/{output_file_name}"
+    output_file = f"{RNX_FOLDER}/{output_file_name}"
     extract_gz(input_file, output_file)
 
-def save_to_json(date: datetime, result: NDArray):
-    filename = f"{FILE_FOLDER}/vertical_{date.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+def save_to_json(name: str, result: list) -> None:
+    json_path = RNX_FOLDER + JSON_FOLDER
+    if not os.path.exists(json_path):
+        os.makedirs(json_path)
+    filename = f"{json_path}/{name}.json"
     data = {"result": result}
     if result is not None:
         with open(filename, "w") as f:
             json.dump(data, f)
 
-def read_from_json(date: datetime) -> dict[str, bool]:
-    filename = f"{FILE_FOLDER}/vertical_{date.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+def read_from_json(name: str) -> list:
+    json_path = RNX_FOLDER + JSON_FOLDER
+    filename = f"{json_path}/{name}.json"
     if os.path.exists(filename):
         with open(filename, "r") as f:
             data = json.load(f)
-        # os.remove(filename)
         return data["result"]
     else:
         return None
@@ -122,7 +128,31 @@ def calculate_vertical_tec(
 
             my_tecs.append(tmp_my_tecs)
 
-    save_to_json(date, my_tecs)
+    filename = f"vertical_{date.strftime('%Y-%m-%d_%H-%M-%S')}"
+    save_to_json(filename, my_tecs)
+
+def save_all_sites() -> None:
+    json_path = RNX_FOLDER + JSON_FOLDER
+    filename = f"{json_path}/all_sites.json"
+    if not os.path.exists(filename):
+        rq = requests.post("https://simurg.iszf.irk.ru/api", 
+                            json={"method": "get_site", "args": {}} 
+                            )
+        all_sites = rq.json()
+        save_to_json("all_sites", all_sites)
+
+
+def extract_all_sats(filename: str) -> list[str] | None:
+    path_file = f"{RNX_FOLDER}/{filename}" 
+    if not os.path.exists(path_file):
+        return None
+    else:
+        data = read_nav_data(path_file)
+        all_sats = []
+        for sat in data:
+            all_sats.append(sat)
+        return all_sats
+
     
 
     
