@@ -108,10 +108,11 @@ def calculate_vertical_tec(
     h_sat = 20015780.84050447
     
     my_tecs = []
-    for lat in lat_range:
-        tmp_my_tecs = dict()
+    
+    for lat in lat_range:    
         m = ModelData(part_size, start_h_from_ground, end_h_from_ground)
         for lon in lon_range:
+            tmp_my_tecs = dict()
             lat_rad = np.radians(lat)
             lon_rad = np.radians(lon)
             tec = m.calculate_TEC([lat_rad, lon_rad, h_site], [lat_rad, lon_rad, h_sat], date)
@@ -119,7 +120,7 @@ def calculate_vertical_tec(
             tmp_my_tecs["lon"] = lon
             tmp_my_tecs["tec"] = tec
 
-        my_tecs.append(tmp_my_tecs)
+            my_tecs.append(tmp_my_tecs)
 
     save_to_json(date, my_tecs)
     
