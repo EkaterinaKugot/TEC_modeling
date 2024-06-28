@@ -7,6 +7,7 @@ languages = {
             "clear-all": "Очистить всё",
             "add-site": "Добавить",
             "build": "Построить",
+            "show": "Показать",
         },
         "data-tab": {
             "label": "Данные",
@@ -48,6 +49,7 @@ languages = {
             "clear-all": "Сlear all",
             "add-site": "Add",
             "build": "Build",
+            "show": "Show",
         },
         "data-tab": {
             "label": "Data products series",

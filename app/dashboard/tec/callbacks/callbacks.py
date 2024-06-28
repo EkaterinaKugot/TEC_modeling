@@ -7,7 +7,13 @@ import requests
 import re
 from datetime import datetime, timedelta, timezone
 
+import matplotlib
+matplotlib.use('Agg') 
+
+import matplotlib.pyplot as plt
+
 BASE_URL = "http://127.0.0.1:8000"
+FOLDER_PNG = "./assets"
 
 language = languages["en"]
 
@@ -100,10 +106,15 @@ def register_callbacks(app: dash.Dash) -> None:
     
     @app.callback(
         [
+            Output("open-window", "is_open", allow_duplicate=True),
             Output("date-store", "data", allow_duplicate=True),
             Output("date", "value", allow_duplicate=True),
             Output("row_time_selection", "style", allow_duplicate=True),
-            Output("open-window", "is_open", allow_duplicate=True),
+            Output("row-graph-ver-tec", "style", allow_duplicate=True),
+            Output("graph-ver-tec", "figure", allow_duplicate=True),
+            Output("ver-tec-store", "data", allow_duplicate=True),
+            Output("show-ver-tec", "disabled", allow_duplicate=True),
+             Output("ver-date-store", "data", allow_duplicate=True),
         ],
         [Input("open-file", "n_clicks")],
         [
@@ -116,14 +127,29 @@ def register_callbacks(app: dash.Dash) -> None:
         n: int,
         filename: str,
         is_open: bool
-    ) -> list[str | bool | dict[str, str]]:
-        return filename, filename, {"margin-top": "20px"}, not is_open
+    ) -> list[str | bool | dict[str, str] | go.Figure | None]:
+        style_ver_tec = {
+            "display": "flex", 
+            "justify-content": "center",
+        }
+        vertical_tec_map = create_vertical_tec_map()
+        return (
+            not is_open,
+            filename, 
+            filename, 
+            {"margin-top": "10px"}, 
+            style_ver_tec, 
+            vertical_tec_map, 
+            None,
+            True,
+            None
+        )
     
     @app.callback(
         [
-            Output("img-ver-tec", "src", allow_duplicate=True),
-            Output("img-ver-tec", "style", allow_duplicate=True),
             Output("time", "invalid", allow_duplicate=True),
+            Output("show-ver-tec", "disabled", allow_duplicate=True),
+            Output("ver-date-store", "data", allow_duplicate=True),
         ],
         [Input("build-ver-tec", "n_clicks")],
         [
@@ -132,20 +158,74 @@ def register_callbacks(app: dash.Dash) -> None:
          ],
         prevent_initial_call=True,
     )
-    def show_vertical_tec(
+    def build_vertical_tec(
         n: int,
         date_store: str,
         time_str: str
-    ):
+    ) -> list[bool | datetime | None]:
         pattern = r'^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$'
         match = re.match(pattern, time_str)
         if match is None:
-            return "", {"visibility": "hidden"}, True
+            return True, True, None
         else:
             date_str = f"{date_store} {time_str}"
             date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+            params = {"date": date}
+            url = BASE_URL + "/build_vertical_TEC"
+            try:
+                response = requests.get(url, params=params)
+                if response.status_code == 200:
+                    return False, False, date
+            except:
+                pass
+        return False, True, None
+    
+    @app.callback(
+        [
+            Output("show-ver-tec", "disabled", allow_duplicate=True),
+            Output("ver-date-store", "data", allow_duplicate=True),
+            Output("ver-tec-store", "data", allow_duplicate=True),
+            Output("graph-ver-tec", "figure", allow_duplicate=True),
+            Output("row-graph-ver-tec", "style", allow_duplicate=True),
             
+        ],
+        [Input("show-ver-tec", "n_clicks")],
+        [
+            State("ver-date-store", "data"),
+        ],
+        prevent_initial_call=True,
+    )
+    def show_vertical_tec(
+        n: int,
+        date: str,
+    ) -> list[bool | str | None | go.Figure | dict[str, str]]:
+        vertical_tec_map = create_vertical_tec_map()
+        style_ver_tec = {
+            "display": "flex", 
+            "justify-content": "center",
+        }
 
+        params = {"date": date}
+        url = BASE_URL + "/get_vertical_TEC"
+
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            result = response.json()
+            if result is None:
+                return False, date, None, vertical_tec_map, style_ver_tec
+            else:
+                vertical_tec_map = create_vertical_tec_map(result)
+                return True, None, result, vertical_tec_map, style_ver_tec
+        return False, date, None, vertical_tec_map, style_ver_tec
+
+    def create_and_save_plot(date, result):
+        plt.imshow(result)
+        plt.colorbar(orientation='vertical')  
+        date_obj = datetime.fromisoformat(date)      
+        path_png = f"{FOLDER_PNG}/vertical_{date_obj.strftime('%Y-%m-%d_%H-%M-%S')}.png"
+        plt.savefig(path_png)
+        plt.close()
+        return path_png
 
 
     @app.callback(
@@ -196,7 +276,6 @@ def register_callbacks(app: dash.Dash) -> None:
             return_value_list[0] = site_map
         return return_value_list
     
-
     
     @app.callback(
         [
@@ -204,28 +283,50 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("date", "value"),
             Output("time", "value"),
             Output("row_time_selection", "style"),
+            Output("show-ver-tec", "disabled"),
+            Output("graph-ver-tec", "figure"),
+            Output("row-graph-ver-tec", "style"),
         ],
         [Input("url", "pathname")],
         [
             State("all-sites-store", "data"),
             State("date-store", "data"),
-            State("time", "value"),
+            State("ver-date-store", "data"),
+            State("ver-tec-store", "data"),
         ],
     )
     def update_all(
         pathname: str,
         all_sites_store: list[list[str | float]],
         date_store: str,
-        tec_time: int
-    ) -> list[go.Figure]:
+        date: str,
+        ver_tec: str
+    ) -> list[go.Figure | str | dict[str, str] | bool]:
         if date_store is not None:
             filename = date_store
-            style = {"margin-top": "20px"}
+            style_form = {"margin-top": "10px"}
+            style_ver_tec = {
+                "display": "flex", 
+                "justify-content": "center",
+            }
         else:
             filename = "none"
-            style = {"visibility": "hidden"}
+            style_form = {"visibility": "hidden"}
+            style_ver_tec = {"visibility": "hidden"}
+            
         site_map = create_site_map(all_sites_store)
-        return site_map, filename, tec_time, style
+        disabled = True
+        time_str = "00:00:00"
+        if date is not None:
+            disabled = False
+            date_obj = datetime.fromisoformat(date)   
+            time_str = date_obj.strftime('%H:%M:%S')
+
+        vertical_tec_map = create_vertical_tec_map()
+        if ver_tec is not None:
+            vertical_tec_map = create_vertical_tec_map(ver_tec) 
+            
+        return site_map, filename, time_str, style_form, disabled, vertical_tec_map, style_ver_tec
 
 
         

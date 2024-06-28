@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 from enum import Enum
 from .languages import languages
 from datetime import datetime, date, timedelta
+import numpy as np
 # from ..processing import DataProducts
 
 language = languages["en"]
@@ -19,6 +20,8 @@ def create_layout(all_sites: list[list[str | float]]) -> html.Div:
         [
             dcc.Store(id="all-sites-store", storage_type="session", data=all_sites),
             dcc.Store(id="date-store", storage_type="session"),
+            dcc.Store(id="ver-date-store", storage_type="session"),
+            dcc.Store(id="ver-tec-store", storage_type="session"),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -72,6 +75,7 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
     open_window = _create_open_window()
     selection_satellites = _create_empty_selection_satellites()
     time_selection = _create_time_selection()
+    vertical_tec_map = create_vertical_tec_map()
     left_side = [
         dbc.Row(
             dbc.Col(
@@ -99,8 +103,22 @@ def _create_left_side(all_sites: list[list[str | float]]) -> list[dbc.Row]:
             style={"visibility": "hidden"}
         ),
         dbc.Row(
-            html.Img(src="", style={"height": "300px", "visibility": "hidden"}, id="img-ver-tec"),
-            style={"margin-top": "10px"}
+            dcc.Graph(
+                id="graph-ver-tec", 
+                figure=vertical_tec_map, 
+                # config={
+                #     "scrollZoom": False,  
+                #     "displayModeBar": False, 
+                #     "staticPlot": True  
+                # },
+                style={
+                    "width": "85%",
+                    "height": "270px", 
+                    "margin-top": "10px", 
+                }
+            ),
+            id="row-graph-ver-tec",
+            style={"visibility": "hidden"}
         ),
     ]
     return left_side
@@ -129,9 +147,57 @@ def _create_time_selection() -> list[html.Div]:
         ),
         dbc.Col(
             dbc.Button(language["buttons"]["build"], id="build-ver-tec"),
+            width=2
+        ),
+        dbc.Col(
+            dbc.Button(language["buttons"]["show"], id="show-ver-tec", disabled=True),
+            style={"margin-left": "-20px"}
         )
     ]
     return time_selection
+
+def create_vertical_tec_map(ver_tec: list[dict[str, float | int]] = list()) -> go.Figure:
+    values = [entry['tec'] for entry in ver_tec] 
+    if len(values) == 0:
+        cmin = 0
+        cmax = 0
+    else:
+        cmin=np.min(values)
+        cmax=np.max(values)
+    
+    scattermapbox = go.Scattermapbox(
+        lat=[entry['lat'] for entry in ver_tec],
+        lon=[entry['lon'] for entry in ver_tec],
+        mode='markers',
+        marker=go.scattermapbox.Marker(
+            size=30,
+            color=values,  
+            colorscale='Viridis', 
+            cmin=cmin,
+            cmax=cmax,
+            opacity=0.07,
+            colorbar=dict(
+                thickness=15,
+                x=0.99,
+            )
+        ),
+        hoverinfo='none'
+    )
+    layout = go.Layout(
+        hovermode='closest',
+        mapbox=dict(
+            style='open-street-map', 
+            center=dict(
+                lat=25,  
+                lon=0,  
+            ),
+            zoom=-0.5,  
+        ),
+        dragmode=False, 
+        margin=dict(l=0, r=0, t=0, b=0),
+    )
+    fig = go.Figure(data=[scattermapbox], layout=layout)
+    return fig
 
 
 def create_site_map(all_sites: list[list[str | float]]) -> go.Figure:
