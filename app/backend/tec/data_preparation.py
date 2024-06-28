@@ -3,8 +3,11 @@ import gzip
 import shutil
 import os
 from datetime import datetime
-import json
+import numpy as np
 import requests
+from tec_calculation.ModelData import ModelData
+import json
+from numpy.typing import NDArray
 
 FILE_FOLDER = "./data"
 DOWNLOAD_URL = [
@@ -13,7 +16,6 @@ DOWNLOAD_URL = [
     "https://simurg.space/files/{}/{}/nav/cddis.gsfc.nasa.gov/BRDC00IGS_R_{}{}0000_01D_MN.rnx.gz"
 ]
 
-RE = 6378000.0  # in meters
 
 def extract_gz(input_file: str, output_file:  str) -> None:
     with gzip.open(input_file, 'rb') as f_in:
@@ -71,6 +73,57 @@ def load_file(date: str) -> None:
     output_file_name = os.path.splitext(os.path.basename(input_file))[0]
     output_file = f"{FILE_FOLDER}/{output_file_name}"
     extract_gz(input_file, output_file)
+
+def save_to_json(date: datetime, result: NDArray):
+    filename = f"{FILE_FOLDER}/vertical_{date.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+    data = {"result": result}
+    if result is not None:
+        with open(filename, "w") as f:
+            json.dump(data, f)
+
+def read_from_json(date: datetime) -> dict[str, bool]:
+    filename = f"{FILE_FOLDER}/vertical_{date.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            data = json.load(f)
+        # os.remove(filename)
+        return data["result"]
+    else:
+        return None
+
+def calculate_vertical_tec(
+        date: datetime,
+        lat_step: int = 5,
+        lon_step: int = 5
+    ) -> list[list[float]]:
+    z_step = 10
+    part_size = (lat_step*110, lon_step*110, z_step)
+    start_h_from_ground = 100
+    end_h_from_ground = 1000
+
+    lat_range = list(range(-90, 90, lat_step))
+    lon_range = list(range(-180, 180, lon_step))
+
+    h_site = 0
+    h_sat = 20015780.84050447
+    
+    my_tecs = []
+    for lat in lat_range:
+        tmp_my_tecs = dict()
+        m = ModelData(part_size, start_h_from_ground, end_h_from_ground)
+        for lon in lon_range:
+            lat_rad = np.radians(lat)
+            lon_rad = np.radians(lon)
+            tec = m.calculate_TEC([lat_rad, lon_rad, h_site], [lat_rad, lon_rad, h_sat], date)
+            tmp_my_tecs["lat"] = lat
+            tmp_my_tecs["lon"] = lon
+            tmp_my_tecs["tec"] = tec
+
+        my_tecs.append(tmp_my_tecs)
+
+    save_to_json(date, my_tecs)
+    
+
     
 
 
