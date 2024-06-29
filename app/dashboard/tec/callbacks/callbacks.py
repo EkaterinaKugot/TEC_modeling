@@ -268,8 +268,25 @@ def register_callbacks(app: dash.Dash) -> None:
     
     @app.callback(
         [
+            Output("input-sites", "value"),
+            Output("lat-lon-store", "data"),
+        ],
+        Input("graph-site-map", "clickData"),
+        prevent_initial_call=True,
+    )
+    def select_site(
+        clickData: dict[str, list[dict[str, float | str | dict]]],
+    ) -> list[str, dict[str, float]]:
+        text = clickData["points"][0]["text"].split(" ")[0]
+        lat_lon_data = {
+            "lat": np.radians(clickData["points"][0]["lat"]), 
+            "lon": np.radians(clickData["points"][0]["lon"])
+        }
+        return text, lat_lon_data
+    
+    @app.callback(
+        [
             Output("input-sites", "invalid"),
-            Output("selection-network", "invalid"),
             Output("selection-sats", "invalid"),
             Output("input-period-time", "invalid"),
             Output("input-lat", "invalid"),
@@ -282,7 +299,6 @@ def register_callbacks(app: dash.Dash) -> None:
         [Input("calculate-tec", "n_clicks")],
         [
             State("input-sites", "value"),
-            State("selection-network", "value"),
             State("selection-sats", "value"),
             State("input-period-time", "value"),
             State("input-lat", "value"),
@@ -290,14 +306,13 @@ def register_callbacks(app: dash.Dash) -> None:
             State("input-z", "value"),
             State("input-z-start", "value"),
             State("input-z-end", "value"),
-            State("all-sites-store", "data"),
+            State("lat-lon-store", "data"),
         ],
         prevent_initial_call=True,
     )
     def build_graph(
         n: int,
         input_sites: str,
-        selection_network: str,
         selection_sats: str,
         input_period_time: int,
         input_lat: int,
@@ -305,13 +320,12 @@ def register_callbacks(app: dash.Dash) -> None:
         input_z: int,
         input_z_start: int,
         input_z_end: int,
-        all_sites_store: list[list[str | float]]
+        lat_lon_store: dict[str, float]
     ):
         
         site_data = create_site_data()
         values = [
             input_sites,
-            selection_network,
             selection_sats,
             input_period_time,
             input_lat,
@@ -325,27 +339,12 @@ def register_callbacks(app: dash.Dash) -> None:
             return_values[-2] = True
             return_values[-1] = True
 
-        name_sites = np.array([site[0] for site in all_sites_store])
-        network_site = np.array([site[1] for site in all_sites_store])
-        if not return_values[0] and input_sites not in name_sites:
-            return_values[0] = True
-        elif not return_values[0] and input_sites in name_sites:
-            index_site = np.where(name_sites == input_sites)[0]
-            index_site = index_site.tolist()
-            selection_network = selection_network if selection_network != "-" else ""
-            if not return_values[1]:
-                flag = False
-                for i in index_site:
-                    if selection_network == network_site[i]:
-                        flag = True
-                        break
-                if not flag:
-                    return_values[1] = True
         if True in return_values:
             return_values.append(site_data)
             return return_values
         
         # Отправка данных
+        return_values.append(site_data)
         return return_values
     
     def check_values(
@@ -370,7 +369,6 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("graph-ver-tec", "figure"),
             Output("row-graph-ver-tec", "style"),
             Output("div-selection-satellites", "children"),
-            Output("div-selection-network", "children"),
         ],
         [Input("url", "pathname")],
         [
@@ -419,12 +417,6 @@ def register_callbacks(app: dash.Dash) -> None:
             all_sats = []
         selection_satellites = create_selection_satellites(all_sats)
 
-        all_network = [site[1] for site in all_sites]
-        if all_network:
-            all_network = list(set(all_network))
-            all_network[0] = "-"
-        selection_network = create_selection_network(all_network)
-
         if not all_sites:
             all_sites = None
         return (
@@ -436,5 +428,4 @@ def register_callbacks(app: dash.Dash) -> None:
             vertical_tec_map,
             style_ver_tec,
             selection_satellites,
-            selection_network,
         )

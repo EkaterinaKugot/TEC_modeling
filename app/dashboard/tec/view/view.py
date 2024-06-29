@@ -24,6 +24,7 @@ def create_layout() -> html.Div:
             dcc.Store(id="ver-date-store", storage_type="session"),
             dcc.Store(id="ver-tec-store", storage_type="session"),
             dcc.Store(id="all-sats-store", storage_type="session"),
+            dcc.Store(id="lat-lon-store", storage_type="session"),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -354,7 +355,6 @@ def _create_data_tab() -> list[dbc.Row]:
     selection_satellites = create_selection_satellites()
     input_sites = _create_input_sites()
     input_period_time = _create_input_period_time()
-    selection_network = create_selection_network()
     input_lat = _create_input_lat()
     input_lon = _create_input_lon()
     input_z_step = _create_input_z_step()
@@ -364,17 +364,16 @@ def _create_data_tab() -> list[dbc.Row]:
         dbc.Row(
             dbc.Col(
                 [
+                    dbc.Label(language["data-tab"]["selection-sites"]+":", width=1),
                     html.Div(
                         input_sites,
                     ),
-                    html.Div(
-                        selection_network,
-                        id="div-selection-network",
-                    ),
+                    dbc.Label(language["data-tab"]["selection-sats"]+":", width=1),
                     html.Div(
                         selection_satellites,
                         id="div-selection-satellites",
                     ),
+                    dbc.Label(language["data-tab"]["input-period-time"]+":", width=1),
                     html.Div(
                         input_period_time,
                         id="div-input-period-time",
@@ -445,7 +444,6 @@ def create_site_data() -> go.Figure:
     site_data = go.Figure()
 
     site_data.update_layout(
-        # title=language["data-tab"]["graph-site-data"]["title"],
         title_font=dict(size=24, color="black"),
         plot_bgcolor="white",
         margin=dict(l=0, t=0, r=0, b=0),
@@ -527,20 +525,7 @@ def create_selection_satellites(
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "110px", "margin-right": "15px"},
-    )
-    return select
-
-
-def create_selection_network(all_network: set[str] = []) -> dbc.Select:
-    select = dbc.Select(
-        id="selection-network",
-        options=all_network,
-        placeholder=language["data-tab"]["selection-network"],
-        invalid=False,
-        persistence=True,
-        persistence_type="session",
-        style={"width": "120px", "margin-right": "15px"},
+        style={"width": "110px", "margin-right": "20px"},
     )
     return select
 
@@ -550,10 +535,11 @@ def _create_input_sites() -> dbc.Input:
         id="input-sites",
         type="text",
         placeholder=language["data-tab"]["selection-sites"],
+        readonly=True,
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "110px", "margin-right": "5px"},
+        style={"width": "110px", "margin-right": "20px"},
     )
     return input
 
