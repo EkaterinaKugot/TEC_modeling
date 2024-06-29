@@ -111,6 +111,9 @@ def register_callbacks(app: dash.Dash) -> None:
             Output(
                 "div-selection-satellites", "children", allow_duplicate=True
             ),
+            Output("graph-site-data", "figure", allow_duplicate=True),
+            Output("site-data-store", "data", allow_duplicate=True),
+            Output("site-data-name-store", "data", allow_duplicate=True),
         ],
         [Input("open-file", "n_clicks")],
         [
@@ -138,6 +141,8 @@ def register_callbacks(app: dash.Dash) -> None:
         selection_satellites = create_selection_satellites(all_sats)
         if not all_sats:
             all_sats = None
+
+        site_data = create_site_data()
         return (
             not is_open,
             filename,
@@ -150,6 +155,9 @@ def register_callbacks(app: dash.Dash) -> None:
             None,
             all_sats,
             selection_satellites,
+            site_data,
+            None,
+            None
         )
 
     @app.callback(
@@ -267,10 +275,7 @@ def register_callbacks(app: dash.Dash) -> None:
         return return_value_list
     
     @app.callback(
-        [
-            Output("input-sites", "value"),
-            Output("lat-lon-store", "data"),
-        ],
+        Output("input-sites", "value"),
         Input("graph-site-map", "clickData"),
         prevent_initial_call=True,
     )
@@ -278,11 +283,7 @@ def register_callbacks(app: dash.Dash) -> None:
         clickData: dict[str, list[dict[str, float | str | dict]]],
     ) -> list[str, dict[str, float]]:
         text = clickData["points"][0]["text"].split(" ")[0]
-        lat_lon_data = {
-            "lat": np.radians(clickData["points"][0]["lat"]), 
-            "lon": np.radians(clickData["points"][0]["lon"])
-        }
-        return text, lat_lon_data
+        return text
     
     @app.callback(
         [
@@ -295,6 +296,8 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("input-z-start", "invalid"),
             Output("input-z-end", "invalid"),
             Output("graph-site-data", "figure", allow_duplicate=True),
+            Output("site-data-store", "data", allow_duplicate=True),
+            Output("site-data-name-store", "data", allow_duplicate=True),
         ],
         [Input("calculate-tec", "n_clicks")],
         [
@@ -306,7 +309,9 @@ def register_callbacks(app: dash.Dash) -> None:
             State("input-z", "value"),
             State("input-z-start", "value"),
             State("input-z-end", "value"),
-            State("lat-lon-store", "data"),
+            State("date-store", "data"),
+            State("site-data-store", "data"),
+            State("site-data-name-store", "data"),
         ],
         prevent_initial_call=True,
     )
@@ -320,9 +325,10 @@ def register_callbacks(app: dash.Dash) -> None:
         input_z: int,
         input_z_start: int,
         input_z_end: int,
-        lat_lon_store: dict[str, float]
+        date: str,
+        site_data_store: dict[str, list],
+        site_data_name: str
     ):
-        
         site_data = create_site_data()
         values = [
             input_sites,
@@ -339,12 +345,38 @@ def register_callbacks(app: dash.Dash) -> None:
             return_values[-2] = True
             return_values[-1] = True
 
+        result = site_data_store
+
         if True in return_values:
             return_values.append(site_data)
+            return_values.append(result)
+            return_values.append(site_data_name)
             return return_values
         
-        # Отправка данных
+        params = {
+            "date": date, 
+            "seconds": input_period_time,
+            "lat": input_lat,
+            "lon": input_lon,
+            "z_step": input_z,
+            "start_h_from_ground": input_z_start,
+            "end_h_from_ground": input_z_end,
+            "name_site": input_sites,
+            "sat": selection_sats
+        }
+        url = BASE_URL + "/get_TEC"
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            return return_values
+        else:
+            result = response.json()
+            tecs = result["tecs"]
+            times = result["times"]
+            el = result["el"]
+            add_trace(site_data, times, tecs, selection_sats)
         return_values.append(site_data)
+        return_values.append(result)
+        return_values.append(selection_sats)
         return return_values
     
     def check_values(
@@ -357,12 +389,46 @@ def register_callbacks(app: dash.Dash) -> None:
             else:
                 return_values.append(False)
         return return_values
+    
+    def add_trace(
+            site_data: go.Figure, 
+            times: list[datetime], 
+            tecs: list[float], 
+            sat: str
+    ) -> None:
+        site_data.add_trace(
+            go.Scatter(
+                x=times,
+                y=tecs,
+                mode="markers",
+                marker=dict(
+                    size=5
+                ),
+                name=sat,
+            )
+        )
+    
+    @app.callback(
+        [
+            Output("graph-site-data", "figure", allow_duplicate=True),
+            Output("site-data-store", "data", allow_duplicate=True),
+            Output("site-data-name-store", "data", allow_duplicate=True),
+        ],
+        [Input("clear-graph", "n_clicks")],
+        prevent_initial_call=True,
+    )
+    def clear_graph(
+        n: int,
+    ) -> list[go.Figure]:
+        site_data = create_site_data()
+        return site_data, None, None
 
 
     @app.callback(
         [
             Output("all-sites-store", "data"),
             Output("graph-site-map", "figure"),
+            Output("graph-site-data", "figure"),
             Output("date", "value"),
             Output("row_time_selection", "style"),
             Output("show-ver-tec", "disabled"),
@@ -377,6 +443,8 @@ def register_callbacks(app: dash.Dash) -> None:
             State("ver-date-store", "data"),
             State("ver-tec-store", "data"),
             State("all-sats-store", "data"),
+            State("site-data-store", "data"),
+            State("site-data-name-store", "data"),
         ],
     )
     def update_all(
@@ -386,6 +454,8 @@ def register_callbacks(app: dash.Dash) -> None:
         date: str,
         ver_tec: str,
         all_sats: list[tuple[str | int]],
+        site_data_store: dict[str, list],
+        site_data_name: str,
     ) -> list[go.Figure | str | dict[str, str] | bool | list[list[str | float]]]:
         if date_store is not None:
             filename = date_store
@@ -398,6 +468,7 @@ def register_callbacks(app: dash.Dash) -> None:
             filename = "none"
             style_form = {"visibility": "hidden"}
             style_ver_tec = {"visibility": "hidden"}
+
         all_sites = []
         if all_sites_store is None:
             url = BASE_URL + "/get_all_sites"
@@ -407,6 +478,7 @@ def register_callbacks(app: dash.Dash) -> None:
         else:
             all_sites = all_sites_store
         site_map = create_site_map(all_sites)
+
         disabled = True
         if date is not None:
             disabled = False
@@ -417,11 +489,19 @@ def register_callbacks(app: dash.Dash) -> None:
             all_sats = []
         selection_satellites = create_selection_satellites(all_sats)
 
+        site_data = create_site_data()
+        if site_data_store is not None and site_data_name is not None:
+            tecs = site_data_store["tecs"]
+            times = site_data_store["times"]
+            el = site_data_store["el"]
+            add_trace(site_data, times, tecs, site_data_name)
+
         if not all_sites:
             all_sites = None
         return (
             all_sites,
             site_map,
+            site_data,
             filename,
             style_form,
             disabled,

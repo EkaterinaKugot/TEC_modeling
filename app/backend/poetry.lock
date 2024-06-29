@@ -1417,7 +1417,7 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7
 
 [[package]]
 name = "tec-calculation"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 optional = false
 python-versions = "^3.10"

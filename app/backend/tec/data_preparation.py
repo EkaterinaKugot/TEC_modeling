@@ -1,8 +1,9 @@
 from coordinates.sat import satellite_xyz, read_nav_data
+from simurg_core.geometry.coord import cart_to_lle, xyz_to_el_az
 import gzip
 import shutil
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import requests
 from tec_calculation.ModelData import ModelData
@@ -25,26 +26,9 @@ def extract_gz(input_file: str, output_file: str) -> None:
     os.remove(input_file)
 
 
-def get_sat_coords(
-    input_file_gz: str,
-    satellite: str = "C",
-    number: int = 40,
-    epoch: datetime = datetime(2024, 1, 1, 12, 0, 0),
-) -> tuple[float]:
+def load_file(date: str) -> None:
     if not os.path.exists(RNX_FOLDER):
         os.makedirs(RNX_FOLDER)
-    input_file = f"{RNX_FOLDER}/{input_file_gz}"
-
-    output_file_name = os.path.splitext(os.path.basename(input_file_gz))[0]
-    output_file = f"{RNX_FOLDER}/{output_file_name}"
-
-    if not os.path.exists(output_file):
-        extract_gz(input_file, output_file)
-    x, y, z = satellite_xyz(output_file, satellite, number, epoch)
-    return x, y, z  # m
-
-
-def load_file(date: str) -> None:
     output_file = f"{RNX_FOLDER}/{date}.rnx.gz"
     datetime_date = datetime.strptime(date, "%Y-%m-%d")
 
@@ -153,3 +137,44 @@ def extract_all_sats(filename: str) -> list[str] | None:
         for sat in data:
             all_sats.append(sat)
         return all_sats
+    
+
+def calculate_tec(
+        part_size: tuple[float, float, float],
+        start_h_from_ground: int,
+        end_h_from_ground: int,
+        start_date: datetime,
+        seconds: int,
+        start_line: tuple[float, float, float],
+        sat: str,
+        input_file: str,
+        site_xyz: list[float]
+) -> dict[str, list]:
+    end_date = start_date + timedelta(days=1)
+    satellite = sat[0]
+    number = int(sat[1:])
+
+    my_tecs = []
+    times = []
+    el_sat = []
+
+    m = ModelData(part_size, start_h_from_ground, end_h_from_ground)
+    while start_date < end_date:
+        sat_x, sat_y, sat_z  = satellite_xyz(input_file, satellite, number, start_date) #sat_z - m
+        el, az = xyz_to_el_az(site_xyz, [sat_x, sat_y, sat_z])
+
+        if np.radians(el) < 0:
+            start_date += timedelta(seconds=seconds)
+            continue
+
+        el_sat.append(el)
+
+        end_lat, end_lon, end_h = cart_to_lle(sat_x, sat_y, sat_z)
+        end_line = [end_lat, end_lon, end_h]
+
+        tec = m.calculate_TEC(start_line, end_line, start_date)
+        times.append(start_date)
+        my_tecs.append(tec)
+        start_date += timedelta(seconds=seconds)
+    result = {"tecs": my_tecs, "times": times, "el": el_sat}
+    return result

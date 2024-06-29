@@ -2,7 +2,8 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from pathlib import Path
 from .data_preparation import *
-
+from simurg_core.geometry.coord import cart_to_lle
+from tec_calculation.ModelData import ModelData
 
 router = APIRouter()
 
@@ -78,3 +79,45 @@ async def get_vertical_TEC(
         return result
     else:
         return None
+
+@router.get("/get_TEC", response_model= dict[str, list] | None)
+async def get_TEC(
+    date: str,
+    seconds: int,
+    lat: int,
+    lon: int,
+    z_step: int,
+    start_h_from_ground: int, 
+    end_h_from_ground: int,
+    name_site: str,
+    sat: str
+) -> dict[str, list] | None:
+    input_file = f"{RNX_FOLDER}/{date}.rnx"
+    start_date = datetime.strptime(date, "%Y-%m-%d")
+    start_date = start_date.replace(hour=0, minute=0, second=0)
+
+    site_info_response = requests.get( f"https://api.simurg.space/sites/{name_site}" )
+    site_info = site_info_response.json()
+
+    site_x, site_y, site_z = site_info["xyz"][0], site_info["xyz"][1], site_info["xyz"][2]
+    site_xyz = [site_x, site_y, site_z]
+    start_lat, start_lon, start_h = cart_to_lle(site_x, site_y, site_z)
+    start_line = (start_lat, start_lon, start_h)
+
+    part_x = ModelData.convert_degrees_to_kms(lat)
+    part_y = ModelData.convert_degrees_to_kms(lon)
+    part_size = (part_x, part_y, z_step)
+
+
+    result = calculate_tec(
+        part_size,
+        start_h_from_ground,
+        end_h_from_ground,
+        start_date,
+        seconds,
+        start_line,
+        sat,
+        input_file,
+        site_xyz
+    )
+    return result

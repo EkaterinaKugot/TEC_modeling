@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tec-calculation"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["EkaterinaKugot <kali.kugot@yandex.ru>"]
 license = "MIT"

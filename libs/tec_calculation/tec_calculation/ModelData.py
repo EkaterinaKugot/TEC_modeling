@@ -271,7 +271,7 @@ class ModelData:
 
     @classmethod
     def show_intersection_data(
-        self,
+        cls,
         coords_intersects: list[tuple[tuple[float]]],
         global_idx: list[list[list[int]]],
         lengths: list[float],
@@ -285,11 +285,10 @@ class ModelData:
             print(f"  Length: {length}")
 
     @classmethod
-    def convert_radians_to_kms(self, rad):
-        degree = np.degrees(rad)
-        return int(degree * KM_PER_DEGREE)
+    def convert_degrees_to_kms(cls, deg):
+        return int(deg * KM_PER_DEGREE)
 
     @classmethod
-    def convert_kms_to_radians(self, km):
+    def convert_kms_to_degrees(cls, km):
         degree = int(km / KM_PER_DEGREE)
-        return np.radians(degree)
+        return degree

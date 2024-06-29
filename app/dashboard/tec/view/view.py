@@ -24,7 +24,8 @@ def create_layout() -> html.Div:
             dcc.Store(id="ver-date-store", storage_type="session"),
             dcc.Store(id="ver-tec-store", storage_type="session"),
             dcc.Store(id="all-sats-store", storage_type="session"),
-            dcc.Store(id="lat-lon-store", storage_type="session"),
+            dcc.Store(id="site-data-store", storage_type="session"),
+            dcc.Store(id="site-data-name-store", storage_type="session"),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -210,31 +211,47 @@ def create_vertical_tec_map(
 
 def create_site_map(all_sites: list[list[str | float]] = []) -> go.Figure:
     text = [f"{point[0]} ({point[1]})" for point in all_sites]
-    site_map = go.Scattergeo(
-        lon=[point[3] for point in all_sites],
+    outline_scattermapbox = go.Scattermapbox(
         lat=[point[2] for point in all_sites],
-        text=text,
+        lon=[point[3] for point in all_sites],
         mode="markers",
-        marker=dict(size=4, color="Silver", line=dict(color="gray", width=1)),
-        hoverlabel=dict(bgcolor="white"),
-        hoverinfo="text+lat+lon",
+        marker=go.scattermapbox.Marker(
+            size=7,  
+            color="gray",
+        ),
+        showlegend=False,
+        hoverinfo='skip'  
     )
-
-    figure = go.Figure(site_map)
-    figure.update_layout(
-        title_font=dict(size=24, color="black"),
-        margin=dict(l=0, t=0, r=0, b=0),
-        geo=dict(projection_type="robinson"),
+    
+    scattermapbox = go.Scattermapbox(
+        lat=[point[2] for point in all_sites],
+        lon=[point[3] for point in all_sites],
+        mode="markers",
+        marker=go.scattermapbox.Marker(
+            size=5,
+            color="Silver"
+        ),
+        showlegend=False,
+        text=text,
+        hovertemplate="%{lat} %{lon}<br>%{text}</b><extra></extra>",
     )
-    figure.update_geos(
-        landcolor="white",
-        showcountries=True,
-        showrivers=True,
-        rivercolor="RoyalBlue",
-        showland=True,
-        showlakes=True,
-        lakecolor="RoyalBlue",
+    layout = go.Layout(
+        mapbox=dict(
+            style="open-street-map",
+            center=dict(
+                lat=0,
+                lon=0,
+            ),
+            zoom=-0.2,
+        ),
+        dragmode=False,
+        margin=dict(l=0, r=0, t=0, b=0),
+        hoverlabel=dict(
+            bgcolor="white", 
+            font_color="black"  
+        )
     )
+    figure = go.Figure(data=[outline_scattermapbox, scattermapbox], layout=layout)
 
     return figure
 
@@ -425,8 +442,8 @@ def _create_data_tab() -> list[dbc.Row]:
                     [
                         input_shift,
                         dbc.Button(
-                            language["buttons"]["clear-all"],
-                            id="clear-all",
+                            language["buttons"]["clear-graph"],
+                            id="clear-graph",
                         ),
                     ],
                     style={"display": "flex", "justify-content": "flex-end"},
