@@ -358,19 +358,12 @@ def _create_data_tab() -> list[dbc.Row]:
     input_lat = _create_input_lat()
     input_lon = _create_input_lon()
     input_z_step = _create_input_z_step()
+    input_z_start = _create_input_z_start()
+    input_z_end = _create_input_z_end()
     data_tab = [
         dbc.Row(
             dbc.Col(
                 [
-                    html.Div(
-                        input_lat,
-                    ),
-                    html.Div(
-                        input_lon,
-                    ),
-                    html.Div(
-                        input_z_step,
-                    ),
                     html.Div(
                         input_sites,
                     ),
@@ -385,15 +378,39 @@ def _create_data_tab() -> list[dbc.Row]:
                     html.Div(
                         input_period_time,
                         id="div-input-period-time",
+                    ), 
+                ],
+                style={"display": "flex", "justify-content": "center"},
+            ),
+            style={"margin-top": "20px"},
+        ),
+        dbc.Row(
+            dbc.Col(
+                [
+                    dbc.Label(language["data-tab"]["cell-size"], width=1),
+                    html.Div(
+                        input_lat,
+                    ),
+                    html.Div(
+                        input_lon,
+                    ),
+                    html.Div(
+                        input_z_step,
+                    ),
+                    html.Div(
+                        input_z_start,
+                    ),
+                    html.Div(
+                        input_z_end,
                     ),
                     dbc.Button(
                         language["buttons"]["build"],
                         id="calculate-tec",
                     ),
                 ],
-                style={"display": "flex", "justify-content": "flex-end"},
+                style={"display": "flex", "justify-content": "space-evenly"},
             ),
-            style={"margin-top": "20px"},
+            style={"margin-top": "10px", "margin-left": "10px"},
         ),
         dbc.Row(
             dcc.Graph(id="graph-site-data", figure=site_data),
@@ -494,7 +511,7 @@ def _create_input_period_time() -> dbc.Input:
         placeholder=language["data-tab"]["input-period-time"],
         persistence=True,
         persistence_type="session",
-        style={"width": "80px", "margin-right": "15px"},
+        style={"width": "80px"},
     )
     return input
 
@@ -504,9 +521,9 @@ def create_selection_satellites(
 ) -> dbc.Select:
     options = [str(sat[0]) + str(sat[1]) for sat in all_sats]
     select = dbc.Select(
-        id="selection-satellites",
+        id="selection-sats",
         options=options,
-        placeholder=language["data-tab"]["selection-satellites"],
+        placeholder=language["data-tab"]["selection-sats"],
         invalid=False,
         persistence=True,
         persistence_type="session",
@@ -517,13 +534,13 @@ def create_selection_satellites(
 
 def create_selection_network(all_network: set[str] = []) -> dbc.Select:
     select = dbc.Select(
-        id="selection_network",
+        id="selection-network",
         options=all_network,
         placeholder=language["data-tab"]["selection-network"],
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "120px", "margin-right": "10px"},
+        style={"width": "120px", "margin-right": "15px"},
     )
     return select
 
@@ -550,7 +567,33 @@ def _create_input_z_step() -> dbc.Input:
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "90px", "margin-right": "15px"},
+        style={"width": "90px"},
+    )
+    return input
+
+def _create_input_z_start() -> dbc.Input:
+    input = dbc.Input(
+        id="input-z-start",
+        type="number",
+        placeholder=language["data-tab"]["input-z-start"],
+        min=80,
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "110px"},
+    )
+    return input
+
+def _create_input_z_end() -> dbc.Input:
+    input = dbc.Input(
+        id="input-z-end",
+        type="number",
+        placeholder=language["data-tab"]["input-z-end"],
+        min=80,
+        invalid=False,
+        persistence=True,
+        persistence_type="session",
+        style={"width": "110px"},
     )
     return input
 
@@ -560,12 +603,12 @@ def _create_input_lon() -> dbc.Input:
         id="input-lon",
         type="number",
         placeholder=language["data-tab"]["input-lon"],
-        min=-180,
+        min=1,
         max=180,
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "80px", "margin-right": "5px"},
+        style={"width": "90px"},
     )
     return input
 
@@ -575,12 +618,12 @@ def _create_input_lat() -> dbc.Input:
         id="input-lat",
         type="number",
         placeholder=language["data-tab"]["input-lat"],
-        min=-90,
+        min=1,
         max=90,
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "80px", "margin-right": "5px"},
+        style={"width": "90px"},
     )
     return input
 

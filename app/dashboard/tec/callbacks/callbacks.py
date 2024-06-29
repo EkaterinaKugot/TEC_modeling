@@ -265,6 +265,100 @@ def register_callbacks(app: dash.Dash) -> None:
             site_map = create_site_map(all_sites_store)
             return_value_list[0] = site_map
         return return_value_list
+    
+    @app.callback(
+        [
+            Output("input-sites", "invalid"),
+            Output("selection-network", "invalid"),
+            Output("selection-sats", "invalid"),
+            Output("input-period-time", "invalid"),
+            Output("input-lat", "invalid"),
+            Output("input-lon", "invalid"),
+            Output("input-z", "invalid"),
+            Output("input-z-start", "invalid"),
+            Output("input-z-end", "invalid"),
+            Output("graph-site-data", "figure", allow_duplicate=True),
+        ],
+        [Input("calculate-tec", "n_clicks")],
+        [
+            State("input-sites", "value"),
+            State("selection-network", "value"),
+            State("selection-sats", "value"),
+            State("input-period-time", "value"),
+            State("input-lat", "value"),
+            State("input-lon", "value"),
+            State("input-z", "value"),
+            State("input-z-start", "value"),
+            State("input-z-end", "value"),
+            State("all-sites-store", "data"),
+        ],
+        prevent_initial_call=True,
+    )
+    def build_graph(
+        n: int,
+        input_sites: str,
+        selection_network: str,
+        selection_sats: str,
+        input_period_time: int,
+        input_lat: int,
+        input_lon: int,
+        input_z: int,
+        input_z_start: int,
+        input_z_end: int,
+        all_sites_store: list[list[str | float]]
+    ):
+        
+        site_data = create_site_data()
+        values = [
+            input_sites,
+            selection_network,
+            selection_sats,
+            input_period_time,
+            input_lat,
+            input_lon,
+            input_z,
+            input_z_start,
+            input_z_end,
+        ]
+        return_values = check_values(values)
+        if not return_values[-2] and not return_values[-1] and values[-2] >= values[-1]:
+            return_values[-2] = True
+            return_values[-1] = True
+
+        name_sites = np.array([site[0] for site in all_sites_store])
+        network_site = np.array([site[1] for site in all_sites_store])
+        if not return_values[0] and input_sites not in name_sites:
+            return_values[0] = True
+        elif not return_values[0] and input_sites in name_sites:
+            index_site = np.where(name_sites == input_sites)[0]
+            index_site = index_site.tolist()
+            selection_network = selection_network if selection_network != "-" else ""
+            if not return_values[1]:
+                flag = False
+                for i in index_site:
+                    if selection_network == network_site[i]:
+                        flag = True
+                        break
+                if not flag:
+                    return_values[1] = True
+        if True in return_values:
+            return_values.append(site_data)
+            return return_values
+        
+        # Отправка данных
+        return return_values
+    
+    def check_values(
+            values: list[str | int | None]
+    ) -> list[go.Figure | bool]:
+        return_values = []
+        for value in values:
+            if value is None:
+                return_values.append(True)
+            else:
+                return_values.append(False)
+        return return_values
+
 
     @app.callback(
         [
@@ -294,7 +388,7 @@ def register_callbacks(app: dash.Dash) -> None:
         date: str,
         ver_tec: str,
         all_sats: list[tuple[str | int]],
-    ) -> list[go.Figure | str | dict[str, str] | bool]:
+    ) -> list[go.Figure | str | dict[str, str] | bool | list[list[str | float]]]:
         if date_store is not None:
             filename = date_store
             style_form = {"margin-top": "10px"}
