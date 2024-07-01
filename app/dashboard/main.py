@@ -1,6 +1,5 @@
 from tec import *
 from dash import Dash
-import requests
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 server = app.server

@@ -425,7 +425,6 @@ def register_callbacks(app: dash.Dash) -> None:
             site_data.layout.yaxis.tickmode = "array"
             site_data.layout.yaxis.tickvals = tickvals
             site_data.layout.yaxis.ticktext = site_data_store["names"]
-            print(site_data.layout.yaxis.ticktext)
     
     @app.callback(
         [
