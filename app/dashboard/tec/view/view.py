@@ -25,7 +25,7 @@ def create_layout() -> html.Div:
             dcc.Store(id="ver-tec-store", storage_type="session"),
             dcc.Store(id="all-sats-store", storage_type="session"),
             dcc.Store(id="site-data-store", storage_type="session"),
-            dcc.Store(id="site-data-name-store", storage_type="session"),
+            dcc.Store(id="site-idx-name-store", storage_type="session"),
             dcc.Location(id="url", refresh=False),
             dbc.Row(
                 [
@@ -209,8 +209,13 @@ def create_vertical_tec_map(
     return fig
 
 
-def create_site_map(all_sites: list[list[str | float]] = []) -> go.Figure:
+def create_site_map(all_sites: list[list[str | float]] = [], idx: int = None) -> go.Figure:
     text = [f"{point[0]} ({point[1]})" for point in all_sites]
+    colors = ["Silver"] * len(all_sites)
+    if idx is not None:
+        colors[idx] = "red"
+    if len(colors) == 0:
+        colors = "Silver"
     outline_scattermapbox = go.Scattermapbox(
         lat=[point[2] for point in all_sites],
         lon=[point[3] for point in all_sites],
@@ -229,7 +234,7 @@ def create_site_map(all_sites: list[list[str | float]] = []) -> go.Figure:
         mode="markers",
         marker=go.scattermapbox.Marker(
             size=5,
-            color="Silver"
+            color=colors
         ),
         showlegend=False,
         text=text,

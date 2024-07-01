@@ -5,12 +5,10 @@ import dash
 from numpy.typing import NDArray
 import requests
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 
 BASE_URL = "http://127.0.0.1:8000"
-FOLDER_PNG = "./assets"
-
 language = languages["en"]
 
 
@@ -113,7 +111,6 @@ def register_callbacks(app: dash.Dash) -> None:
             ),
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
-            Output("site-data-name-store", "data", allow_duplicate=True),
         ],
         [Input("open-file", "n_clicks")],
         [
@@ -157,7 +154,6 @@ def register_callbacks(app: dash.Dash) -> None:
             selection_satellites,
             site_data,
             None,
-            None
         )
 
     @app.callback(
@@ -275,15 +271,23 @@ def register_callbacks(app: dash.Dash) -> None:
         return return_value_list
     
     @app.callback(
-        Output("input-sites", "value"),
+        [
+            Output("input-sites", "value", allow_duplicate=True),
+            Output("graph-site-map", "figure", allow_duplicate=True),
+            Output("site-idx-name-store", "data", allow_duplicate=True),
+        ],
         Input("graph-site-map", "clickData"),
+        State("all-sites-store", "data"),
         prevent_initial_call=True,
     )
     def select_site(
         clickData: dict[str, list[dict[str, float | str | dict]]],
-    ) -> list[str, dict[str, float]]:
+        all_sites_store: list[list[str | float]],
+    ) -> list[str, dict[str, float], dict[str, str | int]]:
         text = clickData["points"][0]["text"].split(" ")[0]
-        return text
+        idx = clickData["points"][0]["pointIndex"]
+        site_map = create_site_map(all_sites_store, idx)
+        return text, site_map, {"idx": idx, "name": text}
     
     @app.callback(
         [
@@ -297,7 +301,6 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("input-z-end", "invalid"),
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
-            Output("site-data-name-store", "data", allow_duplicate=True),
         ],
         [Input("calculate-tec", "n_clicks")],
         [
@@ -311,7 +314,6 @@ def register_callbacks(app: dash.Dash) -> None:
             State("input-z-end", "value"),
             State("date-store", "data"),
             State("site-data-store", "data"),
-            State("site-data-name-store", "data"),
         ],
         prevent_initial_call=True,
     )
@@ -327,9 +329,7 @@ def register_callbacks(app: dash.Dash) -> None:
         input_z_end: int,
         date: str,
         site_data_store: dict[str, list],
-        site_data_name: str
     ):
-        site_data = create_site_data()
         values = [
             input_sites,
             selection_sats,
@@ -345,38 +345,42 @@ def register_callbacks(app: dash.Dash) -> None:
             return_values[-2] = True
             return_values[-1] = True
 
-        result = site_data_store
+        if True not in return_values:
+            params = {
+                "date": date, 
+                "seconds": input_period_time,
+                "lat": input_lat,
+                "lon": input_lon,
+                "z_step": input_z,
+                "start_h_from_ground": input_z_start,
+                "end_h_from_ground": input_z_end,
+                "name_site": input_sites,
+                "sat": selection_sats
+            }
+            url = BASE_URL + "/get_TEC"
+            response = requests.get(url, params=params)
+            if response.status_code != 200:
+                return return_values
+            else:
+                res = response.json()
+                tecs = res["tecs"]
+                times = res["times"]
+                el = res["el"]
+                if site_data_store is None:
+                    site_data_store = dict()
+                    site_data_store["tecs"] = []
+                    site_data_store["times"] = []
+                    site_data_store["el"] = []
+                    site_data_store["names"] = []
+                site_data_store["tecs"].append(tecs)
+                site_data_store["times"].append(times)
+                site_data_store["el"].append(el)
+                site_data_store["names"].append(input_sites)
 
-        if True in return_values:
-            return_values.append(site_data)
-            return_values.append(result)
-            return_values.append(site_data_name)
-            return return_values
-        
-        params = {
-            "date": date, 
-            "seconds": input_period_time,
-            "lat": input_lat,
-            "lon": input_lon,
-            "z_step": input_z,
-            "start_h_from_ground": input_z_start,
-            "end_h_from_ground": input_z_end,
-            "name_site": input_sites,
-            "sat": selection_sats
-        }
-        url = BASE_URL + "/get_TEC"
-        response = requests.get(url, params=params)
-        if response.status_code != 200:
-            return return_values
-        else:
-            result = response.json()
-            tecs = result["tecs"]
-            times = result["times"]
-            el = result["el"]
-            add_trace(site_data, times, tecs, selection_sats)
+        site_data = create_site_data()
+        add_traces_in_graph(site_data, site_data_store)
         return_values.append(site_data)
-        return_values.append(result)
-        return_values.append(selection_sats)
+        return_values.append(site_data_store)
         return return_values
     
     def check_values(
@@ -390,29 +394,43 @@ def register_callbacks(app: dash.Dash) -> None:
                 return_values.append(False)
         return return_values
     
-    def add_trace(
+    def add_traces_in_graph(
             site_data: go.Figure, 
-            times: list[datetime], 
-            tecs: list[float], 
-            sat: str
+            site_data_store: dict[str, list],
     ) -> None:
-        site_data.add_trace(
-            go.Scatter(
-                x=times,
-                y=tecs,
-                mode="markers",
-                marker=dict(
-                    size=5
-                ),
-                name=sat,
+        shift = -10
+        traces = []
+        tickvals = []
+        if site_data_store is not None:
+            for i, (x, y, name) in enumerate(zip(
+                site_data_store["times"], 
+                site_data_store["tecs"], 
+                site_data_store["names"]
+            )):
+                y = list(map(lambda v: v + shift * (i + 1), y))
+                tickvals.append(y[0])
+                trace = go.Scatter(
+                    x=x,
+                    y=y,
+                    mode="markers",
+                    marker=dict(
+                        size=5
+                    ),
+                    name=name,
+                )
+                traces.append(trace)
+            site_data.add_traces(
+                traces
             )
-        )
+            site_data.layout.yaxis.tickmode = "array"
+            site_data.layout.yaxis.tickvals = tickvals
+            site_data.layout.yaxis.ticktext = site_data_store["names"]
+            print(site_data.layout.yaxis.ticktext)
     
     @app.callback(
         [
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
-            Output("site-data-name-store", "data", allow_duplicate=True),
         ],
         [Input("clear-graph", "n_clicks")],
         prevent_initial_call=True,
@@ -421,7 +439,7 @@ def register_callbacks(app: dash.Dash) -> None:
         n: int,
     ) -> list[go.Figure]:
         site_data = create_site_data()
-        return site_data, None, None
+        return site_data, None
 
 
     @app.callback(
@@ -435,6 +453,7 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("graph-ver-tec", "figure"),
             Output("row-graph-ver-tec", "style"),
             Output("div-selection-satellites", "children"),
+            Output("input-sites", "value"),
         ],
         [Input("url", "pathname")],
         [
@@ -444,7 +463,7 @@ def register_callbacks(app: dash.Dash) -> None:
             State("ver-tec-store", "data"),
             State("all-sats-store", "data"),
             State("site-data-store", "data"),
-            State("site-data-name-store", "data"),
+            State("site-idx-name-store", "data")
         ],
     )
     def update_all(
@@ -455,7 +474,7 @@ def register_callbacks(app: dash.Dash) -> None:
         ver_tec: str,
         all_sats: list[tuple[str | int]],
         site_data_store: dict[str, list],
-        site_data_name: str,
+        site_idx_name: dict[str, str | int]
     ) -> list[go.Figure | str | dict[str, str] | bool | list[list[str | float]]]:
         if date_store is not None:
             filename = date_store
@@ -477,7 +496,14 @@ def register_callbacks(app: dash.Dash) -> None:
                 all_sites = response.json()
         else:
             all_sites = all_sites_store
-        site_map = create_site_map(all_sites)
+
+        if site_idx_name is None:
+            name_site = ""
+            idx_site = None
+        else:
+            name_site = site_idx_name["name"]
+            idx_site = site_idx_name["idx"]
+        site_map = create_site_map(all_sites, idx_site)
 
         disabled = True
         if date is not None:
@@ -490,14 +516,12 @@ def register_callbacks(app: dash.Dash) -> None:
         selection_satellites = create_selection_satellites(all_sats)
 
         site_data = create_site_data()
-        if site_data_store is not None and site_data_name is not None:
-            tecs = site_data_store["tecs"]
-            times = site_data_store["times"]
-            el = site_data_store["el"]
-            add_trace(site_data, times, tecs, site_data_name)
+        add_traces_in_graph(site_data, site_data_store)
 
         if not all_sites:
             all_sites = None
+
+       
         return (
             all_sites,
             site_map,
@@ -508,4 +532,5 @@ def register_callbacks(app: dash.Dash) -> None:
             vertical_tec_map,
             style_ver_tec,
             selection_satellites,
+            name_site 
         )
