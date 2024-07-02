@@ -513,8 +513,8 @@ def _create_input_shift() -> dbc.Input:
         id="input-shift",
         type="number",
         step="0.5",
-        value=-0.5,
-        persistence=-0.5,
+        value=-10,
+        persistence=-10,
         persistence_type="session",
         style={"width": "80px", "margin-right": "15px"},
     )

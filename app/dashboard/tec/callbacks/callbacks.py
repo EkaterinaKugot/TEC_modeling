@@ -5,7 +5,7 @@ import dash
 from numpy.typing import NDArray
 import requests
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -111,6 +111,7 @@ def register_callbacks(app: dash.Dash) -> None:
             ),
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
+            Output("time-slider", "disabled", allow_duplicate=True),
         ],
         [Input("open-file", "n_clicks")],
         [
@@ -154,6 +155,7 @@ def register_callbacks(app: dash.Dash) -> None:
             selection_satellites,
             site_data,
             None,
+            True
         )
 
     @app.callback(
@@ -301,6 +303,7 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("input-z-end", "invalid"),
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
+            Output("time-slider", "disabled", allow_duplicate=True),
         ],
         [Input("calculate-tec", "n_clicks")],
         [
@@ -314,6 +317,8 @@ def register_callbacks(app: dash.Dash) -> None:
             State("input-z-end", "value"),
             State("date-store", "data"),
             State("site-data-store", "data"),
+            State("time-slider", "value"),
+            State("input-shift", "value"),
         ],
         prevent_initial_call=True,
     )
@@ -329,6 +334,8 @@ def register_callbacks(app: dash.Dash) -> None:
         input_z_end: int,
         date: str,
         site_data_store: dict[str, list],
+        time_value: list[int],
+        shift: float
     ):
         values = [
             input_sites,
@@ -360,7 +367,7 @@ def register_callbacks(app: dash.Dash) -> None:
             url = BASE_URL + "/get_TEC"
             response = requests.get(url, params=params)
             if response.status_code != 200:
-                return return_values
+                pass
             else:
                 res = response.json()
                 tecs = res["tecs"]
@@ -375,12 +382,17 @@ def register_callbacks(app: dash.Dash) -> None:
                 site_data_store["tecs"].append(tecs)
                 site_data_store["times"].append(times)
                 site_data_store["el"].append(el)
-                site_data_store["names"].append(input_sites)
+                site_data_store["names"].append(f"{input_sites} {selection_sats}")
 
         site_data = create_site_data()
-        add_traces_in_graph(site_data, site_data_store)
+        add_traces_in_graph(site_data, site_data_store, shift)
+        if len(site_data.data) > 0:
+            limit = create_limit_xaxis(site_data, time_value)
+            site_data.update_layout(xaxis=dict(range=[limit[0], limit[1]]))
+        disabled = True if len(site_data.data) == 0 else False
         return_values.append(site_data)
         return_values.append(site_data_store)
+        return_values.append(disabled)
         return return_values
     
     def check_values(
@@ -397,8 +409,10 @@ def register_callbacks(app: dash.Dash) -> None:
     def add_traces_in_graph(
             site_data: go.Figure, 
             site_data_store: dict[str, list],
+            shift: float
     ) -> None:
-        shift = -10
+        if shift == 0 or shift is None:
+            shift = -10
         traces = []
         tickvals = []
         if site_data_store is not None:
@@ -430,6 +444,7 @@ def register_callbacks(app: dash.Dash) -> None:
         [
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
+            Output("time-slider", "disabled", allow_duplicate=True),
         ],
         [Input("clear-graph", "n_clicks")],
         prevent_initial_call=True,
@@ -438,7 +453,83 @@ def register_callbacks(app: dash.Dash) -> None:
         n: int,
     ) -> list[go.Figure]:
         site_data = create_site_data()
-        return site_data, None
+        return site_data, None, True
+    
+    @app.callback(
+        Output("graph-site-data", "figure", allow_duplicate=True),
+        [Input("time-slider", "value")],
+        [
+            State("site-data-store", "data"),
+            State("input-shift", "value"),
+        ],
+        prevent_initial_call=True,
+    )
+    def change_xaxis(
+        time_value: list[int],
+        site_data_store: dict[str, list],
+        shift: float
+    ) -> go.Figure:
+        site_data = create_site_data()
+        add_traces_in_graph(site_data, site_data_store, shift)
+        if len(site_data.data) > 0:
+            limit = create_limit_xaxis(site_data, time_value)
+            site_data.update_layout(xaxis=dict(range=[limit[0], limit[1]]))
+        return site_data
+    
+    def create_limit_xaxis(
+        site_data: go.Figure, time_value: list[int]
+    ) -> tuple[datetime]:
+        date = site_data.data[0].x[0]
+        date = datetime.fromisoformat(date)
+
+        hour_start_limit = 23 if time_value[0] == 24 else time_value[0]
+        minute_start_limit = 59 if time_value[0] == 24 else 0
+        second_start_limit = 59 if time_value[0] == 24 else 0
+
+        hour_end_limit = 23 if time_value[1] == 24 else time_value[1]
+        minute_end_limit = 59 if time_value[1] == 24 else 0
+        second_end_limit = 59 if time_value[1] == 24 else 0
+
+        start_limit = datetime(
+            date.year,
+            date.month,
+            date.day,
+            hour=hour_start_limit,
+            minute=minute_start_limit,
+            second=second_start_limit,
+            tzinfo=timezone.utc,
+        )
+        end_limit = datetime(
+            date.year,
+            date.month,
+            date.day,
+            hour=hour_end_limit,
+            minute=minute_end_limit,
+            second=second_end_limit,
+            tzinfo=timezone.utc,
+        )
+        return (start_limit, end_limit)
+    
+    @app.callback(
+        Output("graph-site-data", "figure", allow_duplicate=True),
+        [Input("input-shift", "value")],
+        [
+            State("site-data-store", "data"),
+            State("time-slider", "value")
+        ],
+        prevent_initial_call=True,
+    )
+    def change_shift(
+        shift: float,
+        site_data_store: dict[str, list],
+        time_value: list[int],
+    ) -> go.Figure:
+        site_data = create_site_data()
+        add_traces_in_graph(site_data, site_data_store, shift)
+        if len(site_data.data) > 0:
+            limit = create_limit_xaxis(site_data, time_value)
+            site_data.update_layout(xaxis=dict(range=[limit[0], limit[1]]))
+        return site_data
 
 
     @app.callback(
@@ -453,6 +544,7 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("row-graph-ver-tec", "style"),
             Output("div-selection-satellites", "children"),
             Output("input-sites", "value"),
+            Output("time-slider", "disabled"),
         ],
         [Input("url", "pathname")],
         [
@@ -462,7 +554,9 @@ def register_callbacks(app: dash.Dash) -> None:
             State("ver-tec-store", "data"),
             State("all-sats-store", "data"),
             State("site-data-store", "data"),
-            State("site-idx-name-store", "data")
+            State("site-idx-name-store", "data"),
+            State("time-slider", "value"),
+            State("input-shift", "value"),
         ],
     )
     def update_all(
@@ -473,7 +567,9 @@ def register_callbacks(app: dash.Dash) -> None:
         ver_tec: str,
         all_sats: list[tuple[str | int]],
         site_data_store: dict[str, list],
-        site_idx_name: dict[str, str | int]
+        site_idx_name: dict[str, str | int],
+        time_value: list[int],
+        shift: float,
     ) -> list[go.Figure | str | dict[str, str] | bool | list[list[str | float]]]:
         if date_store is not None:
             filename = date_store
@@ -515,12 +611,15 @@ def register_callbacks(app: dash.Dash) -> None:
         selection_satellites = create_selection_satellites(all_sats)
 
         site_data = create_site_data()
-        add_traces_in_graph(site_data, site_data_store)
+        add_traces_in_graph(site_data, site_data_store, shift)
+        if len(site_data.data) > 0:
+            limit = create_limit_xaxis(site_data, time_value)
+            site_data.update_layout(xaxis=dict(range=[limit[0], limit[1]]))
 
         if not all_sites:
             all_sites = None
 
-       
+        disabled_time = True if len(site_data.data) == 0 else False
         return (
             all_sites,
             site_map,
@@ -531,5 +630,6 @@ def register_callbacks(app: dash.Dash) -> None:
             vertical_tec_map,
             style_ver_tec,
             selection_satellites,
-            name_site 
+            name_site,
+            disabled_time
         )
