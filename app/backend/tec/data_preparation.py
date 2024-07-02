@@ -43,7 +43,6 @@ def load_file(date: str) -> None:
     urls = []
     for url in DOWNLOAD_URL:
         urls.append(url.format(year, day_of_year, year, day_of_year))
-    # print(urls)
 
     with open(output_file, "wb") as f:
         for url in urls:

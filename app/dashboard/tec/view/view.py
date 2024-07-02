@@ -525,7 +525,7 @@ def _create_input_period_time() -> dbc.Input:
     input = dbc.Input(
         id="input-period-time",
         type="number",
-        step="10",
+        step="1",
         min=10,
         invalid=False,
         placeholder=language["data-tab"]["input-period-time"],

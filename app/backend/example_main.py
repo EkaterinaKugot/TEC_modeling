@@ -2,6 +2,7 @@ from tec import get_sat_coords
 from simurg_core.models.simple_tec import get_tec
 from simurg_core.geometry.coord import cart_to_lle, xyz_to_el_az
 from tec_calculation.ModelData import ModelData
+from coordinates.sat import satellite_xyz
 
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -17,13 +18,13 @@ logging.getLogger('PIL').setLevel(logging.WARNING)
 
 start_time = time.time()
 z_step = 10
-part_size = (500, 500, z_step)
+part_size = (555, 555, z_step)
 start_h_from_ground = 100
 end_h_from_ground = 1000
 start_date = datetime(2024, 1, 1)
 end_date = start_date + timedelta(days=1)
 
-input_file = "2024-01-01.rnx.gz"
+input_file = "2024-01-01.rnx"
 
 my_tecs = []
 model_tec = []
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     while start_date < end_date:
         yday = start_date.timetuple().tm_yday       
         UT = start_date.hour + start_date.minute / 60. + start_date.second / 3600.
-        sat_x, sat_y, sat_z = get_sat_coords(input_file, epoch=start_date)    
+        sat_x, sat_y, sat_z = satellite_xyz(input_file, "G", 5, start_date)    
         
         el, az = xyz_to_el_az([site_x, site_y, site_z], [sat_x, sat_y, sat_z])
 
