@@ -121,3 +121,39 @@ async def get_TEC(
         site_xyz
     )
     return result
+
+@router.get("/get_tec_simurg_core", response_model= dict[str, list] | None)
+async def get_TEC(
+    date: str,
+    seconds: int,
+    z_step: int,
+    start_h_from_ground: int, 
+    end_h_from_ground: int,
+    name_site: str,
+    sat: str,
+    hmax: int, 
+    half_thickness: int,
+) -> dict[str, list] | None:
+    input_file = f"{RNX_FOLDER}/{date}.rnx"
+    start_date = datetime.strptime(date, "%Y-%m-%d")
+    start_date = start_date.replace(hour=0, minute=0, second=0)
+
+    site_info_response = requests.get( f"https://api.simurg.space/sites/{name_site}" )
+    site_info = site_info_response.json()
+
+    site_x, site_y, site_z = site_info["xyz"][0], site_info["xyz"][1], site_info["xyz"][2]
+    site_xyz = [site_x, site_y, site_z]
+
+    result = calculate_with_get_tec(
+        start_h_from_ground,
+        end_h_from_ground,
+        z_step,
+        hmax, 
+        half_thickness,
+        start_date,
+        seconds,
+        sat,
+        input_file,
+        site_xyz
+    )
+    return result

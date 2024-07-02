@@ -104,15 +104,18 @@ def _create_left_side() -> list[dbc.Row]:
             id="row_time_selection",
             style={"visibility": "hidden"},
         ),
+                dbc.Row(
+            dbc.Col(
+                html.Div("", id="status-ver-tec"),
+                style={"display": "flex", "justify-content": "center", "color": "red", "mergin-top": "10px"},
+            ),
+            id="div-status-ver-tec",
+            style={"visibility": "hidden"},
+        ),
         dbc.Row(
             dcc.Graph(
                 id="graph-ver-tec",
                 figure=vertical_tec_map,
-                # config={
-                #     "scrollZoom": False,
-                #     "displayModeBar": False,
-                #     "staticPlot": True
-                # },
                 style={
                     "width": "85%",
                     "height": "270px",
@@ -377,8 +380,8 @@ def _create_data_tab() -> list[dbc.Row]:
     selection_satellites = create_selection_satellites()
     input_sites = _create_input_sites()
     input_period_time = _create_input_period_time()
-    input_lat = _create_input_lat()
-    input_lon = _create_input_lon()
+    input_half_thickness = _create_input_half_thickness()
+    input_hmax = _create_input_hmax()
     input_z_step = _create_input_z_step()
     input_z_start = _create_input_z_start()
     input_z_end = _create_input_z_end()
@@ -389,17 +392,19 @@ def _create_data_tab() -> list[dbc.Row]:
                     dbc.Label(language["data-tab"]["selection-sites"]+":", width=1),
                     html.Div(
                         input_sites,
+                        style={"width": "110px", "margin-right": "20px", "margin-left": "-15px"},
                     ),
                     dbc.Label(language["data-tab"]["selection-sats"]+":", width=1),
                     html.Div(
                         selection_satellites,
                         id="div-selection-satellites",
+                        style={"width": "110px", "margin-right": "20px", "margin-left": "10px"},
                     ),
-                    dbc.Label(language["data-tab"]["input-period-time"]+":", width=1),
+                    dbc.Label(language["data-tab"]["input-half-thickness"], width=1),
                     html.Div(
-                        input_period_time,
-                        id="div-input-period-time",
-                    ), 
+                        input_half_thickness,
+                        style={"width": "70px", "margin-right": "20px", "margin-left": "20px"},
+                    ),
                 ],
                 style={"display": "flex", "justify-content": "center"},
             ),
@@ -408,28 +413,36 @@ def _create_data_tab() -> list[dbc.Row]:
         dbc.Row(
             dbc.Col(
                 [
-                    dbc.Label(language["data-tab"]["cell-size"], width=1),
+                    dbc.Label(language["data-tab"]["input-hmax"], width=1),
                     html.Div(
-                        input_lat,
+                        input_hmax,
+                        style={"width": "70px", "margin-right": "20px"},
                     ),
-                    html.Div(
-                        input_lon,
-                    ),
-                    html.Div(
-                        input_z_step,
-                    ),
+                    
                     html.Div(
                         input_z_start,
+                        style={"width": "100px", "margin-right": "5px"},
                     ),
                     html.Div(
                         input_z_end,
+                        style={"width": "100px", "margin-right": "5px"},
                     ),
+                    html.Div(
+                        input_z_step,
+                        style={"width": "90px", "margin-right": "20px"},
+                    ),
+                    dbc.Label(language["data-tab"]["input-period-time"]+":", width=1),
+                    html.Div(
+                        input_period_time,
+                        style={"width": "80px", "margin-left": "-20px"},
+                    ), 
                     dbc.Button(
                         language["buttons"]["build"],
                         id="calculate-tec",
+                        style={"margin-left": "20px"}
                     ),
                 ],
-                style={"display": "flex", "justify-content": "space-evenly"},
+                style={"display": "flex", "justify-content": "center"},
             ),
             style={"margin-top": "10px", "margin-left": "10px"},
         ),
@@ -531,7 +544,6 @@ def _create_input_period_time() -> dbc.Input:
         placeholder=language["data-tab"]["input-period-time"],
         persistence=True,
         persistence_type="session",
-        style={"width": "80px"},
     )
     return input
 
@@ -547,7 +559,6 @@ def create_selection_satellites(
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "110px", "margin-right": "20px"},
     )
     return select
 
@@ -561,7 +572,6 @@ def _create_input_sites() -> dbc.Input:
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "110px", "margin-right": "20px"},
     )
     return input
 
@@ -575,7 +585,6 @@ def _create_input_z_step() -> dbc.Input:
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "90px"},
     )
     return input
 
@@ -588,7 +597,6 @@ def _create_input_z_start() -> dbc.Input:
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "110px"},
     )
     return input
 
@@ -601,37 +609,32 @@ def _create_input_z_end() -> dbc.Input:
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "110px"},
     )
     return input
 
 
-def _create_input_lon() -> dbc.Input:
+def _create_input_hmax() -> dbc.Input:
     input = dbc.Input(
-        id="input-lon",
+        id="input-hmax",
         type="number",
-        placeholder=language["data-tab"]["input-lon"],
         min=1,
-        max=180,
+        value=300,
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "90px"},
     )
     return input
 
 
-def _create_input_lat() -> dbc.Input:
+def _create_input_half_thickness() -> dbc.Input:
     input = dbc.Input(
-        id="input-lat",
+        id="input-half-thickness",
         type="number",
-        placeholder=language["data-tab"]["input-lat"],
         min=1,
-        max=90,
+        value=100,
         invalid=False,
         persistence=True,
         persistence_type="session",
-        style={"width": "90px"},
     )
     return input
 

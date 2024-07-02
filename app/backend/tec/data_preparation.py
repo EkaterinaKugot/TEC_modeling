@@ -1,5 +1,6 @@
 from coordinates.sat import satellite_xyz, read_nav_data
 from simurg_core.geometry.coord import cart_to_lle, xyz_to_el_az
+from simurg_core.models.simple_tec import get_tec
 import gzip
 import shutil
 import os
@@ -176,4 +177,50 @@ def calculate_tec(
         my_tecs.append(tec)
         start_date += timedelta(seconds=seconds)
     result = {"tecs": my_tecs, "times": times, "el": el_sat}
+    return result
+
+def calculate_with_get_tec(
+        start_h_from_ground: int,
+        end_h_from_ground: int,
+        z_step: int,
+        hmax: int,
+        half_thickness: int,
+        start_date: datetime,
+        seconds: int,
+        sat: str,
+        input_file: str,
+        site_xyz: list[float]
+) -> dict[str, list]:
+    end_date = start_date + timedelta(days=1)
+    satellite = sat[0]
+    number = int(sat[1:])
+
+    tecs = []
+    times = []
+    el_sat = []
+
+    kargs = {"z_start": start_h_from_ground, "z_end": end_h_from_ground, "l_step": z_step,
+        "ne_0": 2e12, "hmax": hmax, "half_thickness": half_thickness}
+
+    while start_date < end_date:
+        yday = start_date.timetuple().tm_yday       
+        UT = start_date.hour + start_date.minute / 60. + start_date.second / 3600.
+
+        sat_x, sat_y, sat_z  = satellite_xyz(input_file, satellite, number, start_date) 
+        el, az = xyz_to_el_az(site_xyz, [sat_x, sat_y, sat_z])
+
+        if np.radians(el) < 0:
+            start_date += timedelta(seconds=seconds)
+            continue
+
+        start_lat, start_lon, _ = cart_to_lle(site_xyz[0], site_xyz[1], site_xyz[2])
+
+        tec = get_tec(yday=yday, UT=UT, az=np.radians(az), el=np.radians(el),
+                        lat_0=start_lat, lon_0=start_lon,
+                        **kargs)
+        tecs.append(tec)
+        times.append(start_date)
+        el_sat.append(el)
+        start_date += timedelta(seconds=seconds)
+    result = {"tecs": tecs, "times": times, "el": el_sat}
     return result

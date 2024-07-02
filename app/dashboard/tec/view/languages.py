@@ -18,12 +18,11 @@ languages = {
             "selection-sats": "Спутник",
             "selection-sites": "Станция",
             "input-period-time": "Сек.",
-            "input-lat": "Шир.",
-            "input-lon": "Дол.",
+            "input-hmax": "Макс. высота:",
+            "input-half-thickness": "Толщина:",
             "input-z": "Z шаг",
             "input-z-start": "Z начало",
             "input-z-end": "Z конец",
-            "cell-size": "Размер ячейки:",
         },
         "tab-adding-site":{
             "label": "Добавление виртуальной станции",
@@ -47,6 +46,8 @@ languages = {
         "time_selection": {
             "date": "Дата",
             "time": "Время",
+            "not-ready": "Вертикальный TEC ещё вычисляется",
+            "server-problems": "Проблемы с сервером",
         }
     },
     "en": {
@@ -68,8 +69,8 @@ languages = {
             "selection-sats": "Satellite",
             "selection-sites": "Sites",
             "input-period-time": "Sec.",
-            "input-lat": "Lat.",
-            "input-lon": "Lon.",
+            "input-hmax": "Max h:",
+            "input-half-thickness": "Thickness:",
             "input-z": "Z step",
             "input-z-start": "Z start",
             "input-z-end": "Z end",
@@ -97,6 +98,8 @@ languages = {
         "time_selection": {
             "date": "Date",
             "time": "Time",
+            "not-ready": "Vertical TEC is still being calculated",
+            "server-problems": "Server problems",
         }
     },
 }

@@ -195,6 +195,8 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("ver-tec-store", "data", allow_duplicate=True),
             Output("graph-ver-tec", "figure", allow_duplicate=True),
             Output("row-graph-ver-tec", "style", allow_duplicate=True),
+            Output("status-ver-tec", "children", allow_duplicate=True),
+            Output("div-status-ver-tec", "style", allow_duplicate=True),
         ],
         [Input("show-ver-tec", "n_clicks")],
         [
@@ -211,6 +213,7 @@ def register_callbacks(app: dash.Dash) -> None:
             "display": "flex",
             "justify-content": "center",
         }
+        text=language["time_selection"]["server-problems"]
 
         params = {"date": date}
         url = BASE_URL + "/get_vertical_TEC"
@@ -219,11 +222,12 @@ def register_callbacks(app: dash.Dash) -> None:
         if response.status_code == 200:
             result = response.json()
             if result is None:
-                return False, date, None, vertical_tec_map, style_ver_tec
+                text=language["time_selection"]["not-ready"]
+                return False, date, None, vertical_tec_map, style_ver_tec, text, {}
             else:
                 vertical_tec_map = create_vertical_tec_map(result)
-                return True, None, result, vertical_tec_map, style_ver_tec
-        return False, date, None, vertical_tec_map, style_ver_tec
+                return True, None, result, vertical_tec_map, style_ver_tec, "", {"visibility": "hidden"}
+        return False, date, None, vertical_tec_map, style_ver_tec, text, {}
 
     @app.callback(
         [
@@ -296,8 +300,8 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("input-sites", "invalid"),
             Output("selection-sats", "invalid"),
             Output("input-period-time", "invalid"),
-            Output("input-lat", "invalid"),
-            Output("input-lon", "invalid"),
+            Output("input-hmax", "invalid"),
+            Output("input-half-thickness", "invalid"),
             Output("input-z", "invalid"),
             Output("input-z-start", "invalid"),
             Output("input-z-end", "invalid"),
@@ -310,8 +314,8 @@ def register_callbacks(app: dash.Dash) -> None:
             State("input-sites", "value"),
             State("selection-sats", "value"),
             State("input-period-time", "value"),
-            State("input-lat", "value"),
-            State("input-lon", "value"),
+            State("input-hmax", "value"),
+            State("input-half-thickness", "value"),
             State("input-z", "value"),
             State("input-z-start", "value"),
             State("input-z-end", "value"),
@@ -327,8 +331,8 @@ def register_callbacks(app: dash.Dash) -> None:
         input_sites: str,
         selection_sats: str,
         input_period_time: int,
-        input_lat: int,
-        input_lon: int,
+        input_hmax: int,
+        input_half_thickness: int,
         input_z: int,
         input_z_start: int,
         input_z_end: int,
@@ -341,8 +345,8 @@ def register_callbacks(app: dash.Dash) -> None:
             input_sites,
             selection_sats,
             input_period_time,
-            input_lat,
-            input_lon,
+            input_hmax,
+            input_half_thickness,
             input_z,
             input_z_start,
             input_z_end,
@@ -356,15 +360,15 @@ def register_callbacks(app: dash.Dash) -> None:
             params = {
                 "date": date, 
                 "seconds": input_period_time,
-                "lat": input_lat,
-                "lon": input_lon,
                 "z_step": input_z,
                 "start_h_from_ground": input_z_start,
                 "end_h_from_ground": input_z_end,
                 "name_site": input_sites,
-                "sat": selection_sats
+                "sat": selection_sats,
+                "hmax": input_hmax,
+                "half_thickness": input_half_thickness,
             }
-            url = BASE_URL + "/get_TEC"
+            url = BASE_URL + "/get_tec_simurg_core"
             response = requests.get(url, params=params)
             if response.status_code != 200:
                 pass
