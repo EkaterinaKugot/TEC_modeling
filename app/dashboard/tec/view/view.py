@@ -447,6 +447,14 @@ def _create_data_tab() -> list[dbc.Row]:
             style={"margin-top": "10px", "margin-left": "10px"},
         ),
         dbc.Row(
+            dbc.Col(
+                html.Div("", id="status-get-tec"),
+                style={"display": "flex", "justify-content": "center", "color": "red", "mergin-top": "10px"},
+            ),
+            id="div-status-get-tec",
+            style={"visibility": "hidden"},
+        ),
+        dbc.Row(
             dcc.Graph(id="graph-site-data", figure=site_data),
             style={"margin-top": "10px"},
         ),

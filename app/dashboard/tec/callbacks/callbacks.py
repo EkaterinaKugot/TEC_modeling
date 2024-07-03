@@ -5,6 +5,7 @@ import dash
 from numpy.typing import NDArray
 import requests
 import re
+import json
 from datetime import datetime, timezone
 
 
@@ -308,6 +309,8 @@ def register_callbacks(app: dash.Dash) -> None:
             Output("graph-site-data", "figure", allow_duplicate=True),
             Output("site-data-store", "data", allow_duplicate=True),
             Output("time-slider", "disabled", allow_duplicate=True),
+            Output("status-get-tec", "children", allow_duplicate=True),
+            Output("div-status-get-tec", "style", allow_duplicate=True),
         ],
         [Input("calculate-tec", "n_clicks")],
         [
@@ -356,6 +359,8 @@ def register_callbacks(app: dash.Dash) -> None:
             return_values[-2] = True
             return_values[-1] = True
 
+        text = ""
+        style = {"visibility": "hidden"}
         if True not in return_values:
             params = {
                 "date": date, 
@@ -370,9 +375,11 @@ def register_callbacks(app: dash.Dash) -> None:
             }
             url = BASE_URL + "/get_tec_simurg_core"
             response = requests.get(url, params=params)
-            if response.status_code != 200:
-                pass
-            else:
+            if response.status_code == 404:
+                text_json = json.loads(response.text)
+                text = text_json.get("detail")
+                style = {}
+            elif response.status_code == 200:
                 res = response.json()
                 tecs = res["tecs"]
                 times = res["times"]
@@ -394,9 +401,12 @@ def register_callbacks(app: dash.Dash) -> None:
             limit = create_limit_xaxis(site_data, time_value)
             site_data.update_layout(xaxis=dict(range=[limit[0], limit[1]]))
         disabled = True if len(site_data.data) == 0 else False
-        return_values.append(site_data)
-        return_values.append(site_data_store)
-        return_values.append(disabled)
+        return_values.extend([site_data, site_data_store, disabled, text, style])
+        # return_values.append(site_data)
+        # return_values.append(site_data_store)
+        # return_values.append(disabled)
+        # return_values.append(text)
+        # return_values.append(style)
         return return_values
     
     def check_values(

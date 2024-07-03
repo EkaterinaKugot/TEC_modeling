@@ -156,4 +156,9 @@ async def get_TEC(
         input_file,
         site_xyz
     )
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"For satellite {sat}, the navigation file {date}.rnx has incorrect entries",
+        )
     return result

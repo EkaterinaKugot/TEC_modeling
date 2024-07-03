@@ -194,7 +194,7 @@ def calculate_with_get_tec(
         sat: str,
         input_file: str,
         site_xyz: list[float]
-) -> dict[str, list]:
+) -> dict[str, list] | None:
     end_date = start_date + timedelta(days=1)
     satellite = sat[0]
     number = int(sat[1:])
@@ -210,7 +210,10 @@ def calculate_with_get_tec(
         yday = start_date.timetuple().tm_yday       
         UT = start_date.hour + start_date.minute / 60. + start_date.second / 3600.
 
-        sat_x, sat_y, sat_z  = satellite_xyz(input_file, satellite, number, start_date) 
+        try:
+            sat_x, sat_y, sat_z  = satellite_xyz(input_file, satellite, number, start_date) 
+        except:
+            return None
         el, az = xyz_to_el_az(site_xyz, [sat_x, sat_y, sat_z])
 
         if np.radians(el) < 0:
