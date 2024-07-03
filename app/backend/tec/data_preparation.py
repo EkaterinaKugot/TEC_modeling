@@ -122,7 +122,11 @@ def save_all_sites() -> None:
             "https://simurg.iszf.irk.ru/api",
             json={"method": "get_site", "args": {}},
         )
-        all_sites = rq.json()
+        all_sites_tmp = rq.json()
+        all_sites = []
+        for site in all_sites_tmp:
+            if site[1] == "base":
+                all_sites.append(site)
         save_to_json("all_sites", all_sites)
 
 
