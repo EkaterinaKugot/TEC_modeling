@@ -104,7 +104,7 @@ def _create_left_side() -> list[dbc.Row]:
             id="row_time_selection",
             style={"visibility": "hidden"},
         ),
-                dbc.Row(
+        dbc.Row(
             dbc.Col(
                 html.Div("", id="status-ver-tec"),
                 style={"display": "flex", "justify-content": "center", "color": "red", "mergin-top": "10px"},
